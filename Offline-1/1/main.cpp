@@ -11,6 +11,7 @@
 
 #define nl printf("\n")
 #define sqr_side_mx 30.0
+#define sphere_r_mx 30.0
 #define threshold 1.0
 
 using namespace std;
@@ -36,7 +37,7 @@ struct point
 //===============================================
 // variables
 point pos, U, R, L;
-double sqr_side = 30.0;
+double sqr_side = 30.0, sphere_r = 0.0;
 //===============================================
 
 
@@ -49,7 +50,7 @@ void printPoint(point x){
     cout<<x.x<<" "<<x.y<<" "<<x.z;nl;
 }
 
-point add(point u, point v) {
+point add(point u, point v){
     return point(u.x + v.x, u.y + v.y, u.z + v.z);
 }
 
@@ -191,7 +192,6 @@ void drawGrid()
 
 void drawSquare(double a)
 {
-    glColor3f(1.0,0.0,0.0);
     glBegin(GL_QUADS);
     {
         glVertex3f(a, a, 0);
@@ -261,6 +261,7 @@ void drawSphere(double radius, int slices, int stacks)
     struct point points[100][100];
     int i, j;
     double h, r;
+
     //generate points
     for (i = 0; i <= stacks; i++)
     {
@@ -273,10 +274,11 @@ void drawSphere(double radius, int slices, int stacks)
             points[i][j].z = h;
         }
     }
+
     //draw quads using generated points
     for (i = 0; i < stacks; i++)
     {
-        glColor3f((double) i / (double) stacks, (double) i / (double) stacks, (double) i / (double) stacks);
+        //glColor3f((double) i / (double) stacks, (double) i / (double) stacks, (double) i / (double) stacks);
         for (j = 0; j < slices; j++)
         {
             glBegin(GL_QUADS);
@@ -286,6 +288,7 @@ void drawSphere(double radius, int slices, int stacks)
                 glVertex3f(points[i][j + 1].x, points[i][j + 1].y, points[i][j + 1].z);
                 glVertex3f(points[i + 1][j + 1].x, points[i + 1][j + 1].y, points[i + 1][j + 1].z);
                 glVertex3f(points[i + 1][j].x, points[i + 1][j].y, points[i + 1][j].z);
+
                 //lower hemisphere
                 glVertex3f(points[i][j].x, points[i][j].y, -points[i][j].z);
                 glVertex3f(points[i][j + 1].x, points[i][j + 1].y, -points[i][j + 1].z);
@@ -299,8 +302,10 @@ void drawSphere(double radius, int slices, int stacks)
 
 
 //===============================================
-void drawQube()
+void drawResizableQube()
 {
+    glColor3f (1.0, 1.0, 1.0);
+
     //x-y plane, bottom surface
     glPushMatrix();
     glTranslated(0, 0, -sqr_side_mx);
@@ -335,6 +340,37 @@ void drawQube()
     drawSquare(sqr_side);
     glPopMatrix();
 
+}
+
+
+void drawResizableSphere()
+{
+    glColor3f (1.0, 0.0, 0.0);
+
+    //draw 8 spheres in 8 corners of the cube
+    double slacks = 75, slices = 75;
+
+    for(int i = -1; i <= 1; i += 2)
+    {
+        for(int j = -1; j <= 1; j += 2)
+        {
+            for(int k = -1; k <= 1; k += 2)
+            {
+                glPushMatrix();
+                glTranslated(i * sqr_side, j * sqr_side, k * sqr_side);
+                drawSphere(sphere_r, slacks, slices);
+                glPopMatrix();
+            }
+        }
+    }
+}
+
+void drawResizableCylinder()
+{
+    GLUquadricObj *quadratic;
+    quadratic = gluNewQuadric();
+    glRotatef(90.0f, 0.0f, 1.0f, 0.0f);
+    gluCylinder(quadratic,0.1f,0.1f,3.0f,32,32);
 }
 //===============================================
 
@@ -399,11 +435,13 @@ void specialKeyListener(int key, int x, int y)
         break;
 
     case GLUT_KEY_HOME:
-        sqr_side = min(sqr_side_mx, sqr_side + threshold);
+        sqr_side = max(0.0, sqr_side - threshold);
+        sphere_r = min(sphere_r_mx, sphere_r + threshold);
         break;
 
     case GLUT_KEY_END:
-        sqr_side = max(0.0, sqr_side - threshold);
+        sqr_side = min(sqr_side_mx, sqr_side + threshold);
+        sphere_r = max(0.0, sphere_r - threshold);
         break;
 
     default:
@@ -469,9 +507,9 @@ void display()
     //add objects
 
     drawAxes();
-
-    //glColor3f(1,0,0);
-    drawQube();
+    drawResizableQube();
+    drawResizableSphere();
+    drawResizableCylinder();
 
     //ADD this line in the end --- if you use double buffer (i.e. GL_DOUBLE)
     glutSwapBuffers();
