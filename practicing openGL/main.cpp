@@ -195,6 +195,68 @@ void drawSS()
     drawSquare(5);
 }
 
+void drawPoint()
+{
+    //glPointSize(10.0);
+    glColor3f(1, 1, 1);
+
+    glBegin(GL_POINT);
+    {
+        glVertex3i(1, 2, 1);
+    }
+
+    glEnd();
+}
+
+void drawTriangle()
+{
+    glBegin(GL_TRIANGLES);
+    {
+        glVertex2i(15, 0);
+        glVertex2i(-15, 0);
+        glVertex2i(0, -15);
+    }
+    glEnd();
+}
+
+double side_max = 20.0;
+double side = 20.0;
+void draw6Squares()
+{
+	glColor3f(220.0, 20.0, 60.0);
+	for (int i = 0; i<25; i++)
+	{
+		glPushMatrix();
+	}
+
+	glTranslated(0, 0, side_max);
+	drawSquare(side);
+
+	glPopMatrix();
+	glTranslated(0, 0, -side_max);
+	drawSquare(side);
+
+	glPopMatrix();
+	glRotated(90, 1, 0, 0);
+	glTranslated(0, 0, side_max);
+	drawSquare(side);
+
+	glPopMatrix();
+	glRotated(-90, 1, 0, 0);
+	glTranslated(0, 0, side_max);
+	drawSquare(side);
+
+	glPopMatrix();
+	glRotated(90, 0, 1, 0);
+	glTranslated(0, 0, side_max);
+	drawSquare(side);
+
+	glPopMatrix();
+	glRotated(-90, 0, 1, 0);
+	glTranslated(0, 0, side_max);
+	drawSquare(side);
+}
+
 void keyboardListener(unsigned char key, int x,int y){
 	switch(key){
 
@@ -233,8 +295,10 @@ void specialKeyListener(int key, int x,int y){
 			break;
 
 		case GLUT_KEY_HOME:
+		    side = max(0, side + 0.1);
 			break;
 		case GLUT_KEY_END:
+		    side = max(0, side - 0.1);
 			break;
 
 		default:
@@ -301,21 +365,9 @@ void display(){
 	****************************/
 	//add objects
 
-	drawAxes();drawgrid = 1;
-	drawGrid();
+	drawAxes();
 
-    glColor3f(1,0,0);
-    //drawSquare(10);
-
-    drawSS();
-
-    //drawCircle(30,24);
-
-    //drawCone(20,50,24);
-
-	//drawSphere(30,24,20);
-
-
+    draw6Squares();
 
 
 	//ADD this line in the end --- if you use double buffer (i.e. GL_DOUBLE)

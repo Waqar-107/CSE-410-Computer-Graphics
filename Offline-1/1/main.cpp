@@ -9,24 +9,9 @@
 #define clkwise 1
 #define anticlkwise -1
 
-#define dbg printf("in\n")
 #define nl printf("\n")
-#define N 1000100
-#define inf 1e18
-
-#define sf(n) scanf("%d", &n)
-#define sff(n,m) scanf("%d%d",&n,&m)
-#define sfl(n) scanf("%I64d", &n)
-#define sffl(n,m) scanf("%I64d%I64d",&n,&m)
-
-#define pf(n) printf("%d",n)
-#define pff(n,m) printf("%d %d",n,m)
-#define pffl(n,m) printf("%I64d %I64d",n,m)
-#define pfl(n) printf("%I64d",n)
-#define pfs(s) printf("%s",s)
-
-#define pb push_back
-#define pp pair<int, int>
+#define sqr_side_mx 30.0
+#define threshold 1.0
 
 using namespace std;
 
@@ -51,6 +36,7 @@ struct point
 //===============================================
 // variables
 point pos, U, R, L;
+double sqr_side = 30.0;
 //===============================================
 
 
@@ -164,9 +150,11 @@ void drawAxes()
             glVertex3f(100, 0, 0);
             glVertex3f(-100, 0, 0);
 
+            glColor3f (0.0, 0.0, 1.0);
             glVertex3f(0, -100, 0);
             glVertex3f(0, 100, 0);
 
+            glColor3f (1.0, 1.0, 0.0);
             glVertex3f(0, 0, 100);
             glVertex3f(0, 0, -100);
         }
@@ -203,13 +191,13 @@ void drawGrid()
 
 void drawSquare(double a)
 {
-    //glColor3f(1.0,0.0,0.0);
+    glColor3f(1.0,0.0,0.0);
     glBegin(GL_QUADS);
     {
-        glVertex3f(a, a, 2);
-        glVertex3f(a, -a, 2);
-        glVertex3f(-a, -a, 2);
-        glVertex3f(-a, a, 2);
+        glVertex3f(a, a, 0);
+        glVertex3f(a, -a, 0);
+        glVertex3f(-a, -a, 0);
+        glVertex3f(-a, a, 0);
     }
     glEnd();
 }
@@ -309,33 +297,47 @@ void drawSphere(double radius, int slices, int stacks)
     }
 }
 
-void drawSS()
+
+//===============================================
+void drawQube()
 {
-    glColor3f(1, 0, 0);
-    drawSquare(20);
-
-    glRotatef(angle, 0, 0, 1);
-    glTranslatef(110, 0, 0);
-    glRotatef(2 * angle, 0, 0, 1);
-    glColor3f(0, 1, 0);
-    drawSquare(15);
-
+    //x-y plane, bottom surface
     glPushMatrix();
-    {
-        glRotatef(angle, 0, 0, 1);
-        glTranslatef(60, 0, 0);
-        glRotatef(2 * angle, 0, 0, 1);
-        glColor3f(0, 0, 1);
-        drawSquare(10);
-    }
+    glTranslated(0, 0, -sqr_side_mx);
+    drawSquare(sqr_side);
     glPopMatrix();
 
-    glRotatef(3 * angle, 0, 0, 1);
-    glTranslatef(40, 0, 0);
-    glRotatef(4 * angle, 0, 0, 1);
-    glColor3f(1, 1, 0);
-    drawSquare(5);
+    //top surface
+    glPushMatrix();
+    glTranslated(0, 0, sqr_side_mx);
+    drawSquare(sqr_side);
+    glPopMatrix();
+
+    //side
+    glPushMatrix();
+
+    glRotated(90, 1, 0, 0);
+    glTranslated(0, 0, sqr_side_mx);
+    drawSquare(sqr_side);
+
+    glTranslated(0, 0, -sqr_side_mx * 2);
+    drawSquare(sqr_side);
+    glPopMatrix();
+
+    //another side
+    glPushMatrix();
+
+    glRotated(90, 0, 1, 0);
+    glTranslated(0, 0, sqr_side_mx);
+    drawSquare(sqr_side);
+
+    glTranslated(0, 0, -sqr_side_mx * 2);
+    drawSquare(sqr_side);
+    glPopMatrix();
+
 }
+//===============================================
+
 
 void keyboardListener(unsigned char key, int x, int y)
 {
@@ -397,9 +399,11 @@ void specialKeyListener(int key, int x, int y)
         break;
 
     case GLUT_KEY_HOME:
+        sqr_side = min(sqr_side_mx, sqr_side + threshold);
         break;
 
     case GLUT_KEY_END:
+        sqr_side = max(0.0, sqr_side - threshold);
         break;
 
     default:
@@ -452,7 +456,6 @@ void display()
     //1. where is the camera (viewer)?
     //2. where is the camera looking?
     //3. Which direction is the camera's UP direction?
-    //gluLookAt(0, 0, 200, 0, 0, 0, 0, 1, 0);
     gluLookAt(pos.x, pos.y, pos.z, pos.x + L.x, pos.y + L.y, pos.z + L.z, U.x, U.y, U.z);
 
 
@@ -466,21 +469,9 @@ void display()
     //add objects
 
     drawAxes();
-    drawGrid();
 
     //glColor3f(1,0,0);
-    //drawSquare(10);
-
-    drawSS();
-
-    //drawCircle(30,24);
-
-    //drawCone(20,50,24);
-
-    //drawSphere(30,24,20);
-
-
-
+    drawQube();
 
     //ADD this line in the end --- if you use double buffer (i.e. GL_DOUBLE)
     glutSwapBuffers();
@@ -548,3 +539,9 @@ int main(int argc, char **argv)
 
     return 0;
 }
+
+/*
+https://stackoverflow.com/questions/19170778/glrotateangle-x-y-z-what-is-x-y-z-in-this-case
+
+
+*/
