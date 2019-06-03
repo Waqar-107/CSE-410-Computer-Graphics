@@ -519,10 +519,8 @@ void drawResizableCylinder()
     glPopMatrix();
 
     glPushMatrix();
-    glTranslated(0, h, h);
-    glRotated(-90, 0, 1, 0);
-    glRotated(180, 0, 1, 0);
-    glTranslated(20,20,20);
+    glTranslated(h, 0, h);
+    glRotated(90, 1, 0, 0);
     drawCylinder(r, h);
     glPopMatrix();
     //-----------------------------------------------------
@@ -546,6 +544,13 @@ void drawResizableCylinder()
     glTranslated(0, -h, -h);
     glRotated(90, 0, 1, 0);
     glRotated(270, 0, 0, 1);
+    drawCylinder(r, h);
+    glPopMatrix();
+
+    glPushMatrix();
+    glTranslated(h, 0, -h);
+    glRotated(90, 0, 1, 0);
+    glRotated(90, 1, 0, 0);
     drawCylinder(r, h);
     glPopMatrix();
     //-----------------------------------------------------
