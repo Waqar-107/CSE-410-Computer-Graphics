@@ -42,29 +42,19 @@ double sqr_side = 30.0, sphere_r = 0.0;
 
 
 //===============================================
-float degreeToRadian(float deg)
-{
+float degreeToRadian(float deg) {
     return (pi * deg) / 180;
 }
 
-void printPoint(point x)
-{
-    cout<<x.x<<" "<<x.y<<" "<<x.z;
-    nl;
-}
-
-point add(point u, point v)
-{
+point add(point u, point v) {
     return point(u.x + v.x, u.y + v.y, u.z + v.z);
 }
 
-point subtract(point u, point v)
-{
+point subtract(point u, point v) {
     return point(u.x - v.x, u.y - v.y, u.z - v.z);
 }
 
-point cross_product(point u, point v)
-{
+point cross_product(point u, point v) {
     point temp;
     temp.x = u.y * v.z - u.z * v.y;
     temp.y = u.z * v.x - u.x * v.z;
@@ -89,69 +79,57 @@ point rotation3D(point v, point reff, int dir)
     return temp;
 }
 
-void move_forward()
-{
+void move_forward() {
     pos = add(pos, L);
 }
 
-void move_backward()
-{
+void move_backward() {
     pos = subtract(pos, L);
 }
 
-void move_right()
-{
+void move_right() {
     pos = add(pos, R);
 }
 
-void move_left()
-{
+void move_left() {
     pos = subtract(pos, R);
 }
 
-void move_up()
-{
+void move_up() {
     pos = add(pos, U);
 }
 
-void move_down()
-{
+void move_down() {
     pos = subtract(pos, U);
 }
 
-void look_left()
-{
+void look_left() {
     //rotate l and r
     L = rotation3D(L, U, anticlkwise);
     R = rotation3D(R, U, anticlkwise);
 }
 
-void look_right()
-{
+void look_right() {
     L = rotation3D(L, U, clkwise);
     R = rotation3D(R, U, clkwise);
 }
 
-void look_up()
-{
+void look_up() {
     L = rotation3D(L, R, anticlkwise);
     U = rotation3D(U, R, anticlkwise);
 }
 
-void look_down()
-{
+void look_down() {
     L = rotation3D(L, R, clkwise);
     U = rotation3D(U, R, clkwise);
 }
 
-void tilt_clockwise()
-{
+void tilt_clockwise() {
     R = rotation3D(R, L, anticlkwise);
     U = rotation3D(U, L, anticlkwise);
 }
 
-void tilt_counter_clockwise()
-{
+void tilt_counter_clockwise() {
     R = rotation3D(R, L, clkwise);
     U = rotation3D(U, L, clkwise);
 }
@@ -162,18 +140,21 @@ void drawAxes()
 {
     if (drawaxes == 1)
     {
-        glColor3f(1.0, 1.0, 1.0);
         glBegin(GL_LINES);
         {
+            glColor3f(1.0, 1.0, 1.0);
             glVertex3f(100, 0, 0);
+            glColor3f (0.0, 1.0, 1.0);
             glVertex3f(-100, 0, 0);
 
             glColor3f (0.0, 0.0, 1.0);
             glVertex3f(0, -100, 0);
+            glColor3f (1.0, 1.0, 0.0);
             glVertex3f(0, 100, 0);
 
-            glColor3f (1.0, 1.0, 0.0);
+            glColor3f (0.0, 1.0, 0.0);
             glVertex3f(0, 0, 100);
+            glColor3f (1.0, 0.0, 1.0);
             glVertex3f(0, 0, -100);
         }
         glEnd();
@@ -757,6 +738,4 @@ int main(int argc, char **argv)
 
 /*
 https://stackoverflow.com/questions/19170778/glrotateangle-x-y-z-what-is-x-y-z-in-this-case
-
-
 */
