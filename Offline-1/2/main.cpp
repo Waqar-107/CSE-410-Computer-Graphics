@@ -5,10 +5,14 @@
 #include <glut.h>
 
 #define pi (2*acos(0.0))
+
 #define rotateVal 3
 #define camRotateVal 1
+
 #define clkwise 1
 #define anticlkwise -1
+
+#define camUpDownVal 1
 
 #define nl printf("\n")
 
@@ -110,7 +114,8 @@ void camera_move_left()
     double x2 = pos.x * cos(degreeToRadian(camRotateVal * anticlkwise)) - pos.y * sin(degreeToRadian(camRotateVal * anticlkwise));
     double y2 = pos.x * sin(degreeToRadian(camRotateVal * anticlkwise)) + pos.y * cos(degreeToRadian(camRotateVal * anticlkwise));
 
-    pos = point(x2, y2, pos.z);
+    pos.x = x2;
+    pos.y = y2;
 }
 
 void camera_move_right()
@@ -119,13 +124,16 @@ void camera_move_right()
     double x2 = pos.x * cos(degreeToRadian(camRotateVal * clkwise)) - pos.y * sin(degreeToRadian(camRotateVal * clkwise));
     double y2 = pos.x * sin(degreeToRadian(camRotateVal * clkwise)) + pos.y * cos(degreeToRadian(camRotateVal * clkwise));
 
-    pos = point(x2, y2, pos.z);
+    pos.x = x2;
+    pos.y = y2;
 }
 
 void camera_move_up(){
+    pos.z += camUpDownVal;
 }
 
 void camera_move_down(){
+    pos.z -= camUpDownVal;
 }
 //===============================================
 
