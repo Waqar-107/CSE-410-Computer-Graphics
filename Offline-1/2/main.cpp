@@ -43,6 +43,113 @@ point pos, U, R, L;
 
 
 //===============================================
+void drawCircle(double radius, int segments)
+{
+    struct point points[100];
+
+    //generate points to draw in x-z plane
+    for(int i = 0; i < segments; i++)
+    {
+        // x = r * cos(theta)
+        // y = r * sin(theta)
+        points[i].x = radius * cos(((double) i / (double) segments) * 2 * pi);
+        points[i].z = radius * sin(((double) i / (double) segments) * 2 * pi);
+    }
+
+    //glColor3f (0.5, 0.5, 0.5);
+    glColor3f (0.0, 1.0, 1.0);
+
+    //draw segments using generated points
+    for (int i = 0; i < segments; i++)
+    {
+        glBegin(GL_LINES);
+        {
+            glVertex3f(points[i].x, 0, points[i].z);
+            glVertex3f(points[(i + 1) % segments].x, 0, points[i + 1].z);
+        }
+        glEnd();
+    }
+}
+
+void drawSides(double radius, int segments, int d)
+{
+     struct point points[100];
+
+    //generate points to draw in x-z plane
+    for(int i = 0; i < segments; i++)
+    {
+        points[i].x = radius * cos(((double) i / (double) segments) * 2 * pi);
+        points[i].z = radius * sin(((double) i / (double) segments) * 2 * pi);
+    }
+
+    //glColor3f (0.5, 0.5, 0.5);
+    glColor3f (0.0, 1.0, 1.0);
+
+    for(int i = 0; i < segments; i++)
+    {
+        glBegin(GL_QUADS);
+        {
+            glVertex3f(points[i].x, d, points[i].z);
+            glVertex3f(points[i].x, -d, points[i].z);
+            glVertex3f(points[(i + 1) % segments].x, -d, points[(i + 1) % segments].z);
+            glVertex3f(points[(i + 1) % segments].x, d, points[(i + 1) % segments].z);
+        }
+        glEnd();
+    }
+}
+
+void drawWheel()
+{
+    int segments = 100;
+    double r = 25, d = 5;
+
+    glPushMatrix();
+    glTranslated(0, 0, r);
+
+    //-------------------------------------------
+    //draw circles
+    glPushMatrix();
+    glTranslated(0, d, 0);
+    drawCircle(r, segments);
+    glPopMatrix();
+
+    glPushMatrix();
+    glTranslated(0, -d, 0);
+    drawCircle(r, segments);
+    glPopMatrix();
+    //-------------------------------------------
+
+    //-------------------------------------------
+    //draw the cylindrical part of the circle
+    drawSides(r, segments, d);
+    //-------------------------------------------
+
+    //-------------------------------------------
+    //the rims inside the wheel
+    //glColor3f (0.5, 0.5, 0.5);
+    glColor3f (0.0, 1.0, 1.0);
+    glBegin(GL_QUADS);
+    {
+        glVertex3f(0, -d / 2, r);
+        glVertex3f(0, d / 2, r);
+        glVertex3f(0, d / 2, -r);
+        glVertex3f(0, -d / 2, -r);
+    }
+    glEnd();
+
+    glBegin(GL_QUADS);
+    {
+        glVertex3f(r, d / 2, 0);
+        glVertex3f(r, -d / 2, 0);
+        glVertex3f(-r, -d / 2, 0);
+        glVertex3f(-r, d / 2, 0);
+    }
+    glEnd();
+    //-------------------------------------------
+
+    glPopMatrix();
+}
+
 float degreeToRadian(float deg)
 {
     return (pi * deg) / 180;
@@ -261,6 +368,8 @@ void mouseListener(int button, int state, int x, int y)      //x, y is the x-y o
     switch (button)
     {
     case GLUT_LEFT_BUTTON:
+        if(state == GLUT_DOWN)
+            drawaxes = 1 - drawaxes;
         break;
 
     case GLUT_RIGHT_BUTTON:
@@ -293,7 +402,6 @@ void display()
     glLoadIdentity();
 
     //position of camera, coordinate where the camera is looking at, up vector
-    //gluLookAt(pos.x, pos.y, pos.z, pos.x + L.x, pos.y + L.y, pos.z + L.z, U.x, U.y, U.z);
     gluLookAt(pos.x, pos.y, pos.z,  0, 0, 0 ,	 0, 0, 1);
 
     //again select MODEL-VIEW
@@ -305,11 +413,10 @@ void display()
     ****************************/
     drawAxes();
     drawGrid();
+    drawWheel();
 
     //ADD this line in the end --- if you use double buffer (i.e. GL_DOUBLE)
     glutSwapBuffers();
-
-    //L = point(0.0, 0.0, 0.0);
 }
 
 void animate()
@@ -346,6 +453,7 @@ void init()
     //aspect ratio that determines the field of view in the X direction (horizontally)
     //near distance and far distance
 
+    //pos = point(200*cos(cameraAngle), 200*sin(cameraAngle), cameraHeight);
     pos = point(70.0, 70.0, 100.0);
 }
 
