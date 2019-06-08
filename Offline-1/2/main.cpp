@@ -6,13 +6,15 @@
 
 #define pi (2*acos(0.0))
 
-#define rotateVal 3
+#define wheel_lr_angle 3
+
 #define camRotateVal 1
+#define camUpDownVal 1
 
 #define clkwise 1
 #define anticlkwise -1
 
-#define camUpDownVal 1
+#define wheelRadius 25
 
 #define nl printf("\n")
 
@@ -39,10 +41,25 @@ struct point
 //===============================================
 // variables
 point pos, U, R, L;
+point center, forward_vector, Xvec;
+double theta;
+double wheel_rim_angle;
 //===============================================
 
 
 //===============================================
+void drawSquare(double a)
+{
+    glBegin(GL_QUADS);
+    {
+        glVertex3f(a, a, 0);
+        glVertex3f(a, -a, 0);
+        glVertex3f(-a, -a, 0);
+        glVertex3f(-a, a, 0);
+    }
+    glEnd();
+}
+
 void drawCircle(double radius, int segments)
 {
     struct point points[100];
@@ -101,10 +118,17 @@ void drawSides(double radius, int segments, int d)
 void drawWheel()
 {
     int segments = 100;
-    double r = 25, d = 5;
+    double r = wheelRadius, d = 5;
 
     glPushMatrix();
-    glTranslated(0, 0, r);
+
+
+   //when the wheel moves forward or backward
+    glTranslated(center.x, center.y, center.z);
+    glRotatef(wheel_rim_angle, 0, 1, 0);
+
+     //when the wheel moves left or right
+    glRotatef(theta, 0, 0, 1);
 
     //-------------------------------------------
     //draw circles
@@ -126,7 +150,6 @@ void drawWheel()
 
     //-------------------------------------------
     //the rims inside the wheel
-    //glColor3f (0.5, 0.5, 0.5);
     glColor3f (0.0, 1.0, 1.0);
     glBegin(GL_QUADS);
     {
@@ -155,64 +178,72 @@ float degreeToRadian(float deg)
     return (pi * deg) / 180;
 }
 
-void pfp(point x){
+void pf(point x){
     cout<<x.x<<" "<<x.y<<" "<<x.z<<endl;
 }
 
-point add(point u, point v)
-{
+point add(point u, point v) {
     return point(u.x + v.x, u.y + v.y, u.z + v.z);
 }
 
-point subtract(point u, point v)
-{
+point subtract(point u, point v) {
     return point(u.x - v.x, u.y - v.y, u.z - v.z);
-}
-
-point cross_product(point u, point v)
-{
-    point temp;
-    temp.x = u.y * v.z - u.z * v.y;
-    temp.y = u.z * v.x - u.x * v.z;
-    temp.z = u.x * v.y - u.y * v.x;
-
-    return temp;
-}
-
-point rotation3D(point v, point reff, int dir)
-{
-    //first determine a vector that is perpendicular to both \
-    the reference and the vector we are rotating
-    point p = cross_product(v, reff);
-    point temp;
-
-    //scale v by cos and p by sine and take their sum
-    double ang = dir * degreeToRadian(rotateVal);
-    temp.x = v.x * cos(ang) + p.x * sin(ang);
-    temp.y = v.y * cos(ang) + p.y * sin(ang);
-    temp.z = v.z * cos(ang) + p.z * sin(ang);
-
-    return temp;
 }
 
 void move_forward()
 {
+    center = add(center, forward_vector);
 
+    double dist = forward_vector.x * forward_vector.x + forward_vector.y * forward_vector.y + forward_vector.z * forward_vector.z;
+    dist = sqrt(dist);
+
+    //2 * pi * R = 360 =>
+    wheel_rim_angle += (360 * dist) / (2 * pi * wheelRadius);
 }
 
 void move_backward()
 {
+    center = subtract(center, forward_vector);
 
+    double dist = forward_vector.x * forward_vector.x + forward_vector.y * forward_vector.y + forward_vector.z * forward_vector.z;
+    dist = sqrt(dist);
+
+    //2 * pi * R = 360 =>
+    wheel_rim_angle -= (360 * dist) / (2 * pi * wheelRadius);
 }
 
-void move_right()
-{
+void move_right() {
+    //rotate forward_vector in 2D
+    double x = forward_vector.x * cos(degreeToRadian(wheel_lr_angle * clkwise)) - forward_vector.y * sin(degreeToRadian(wheel_lr_angle * clkwise));
+    double y = forward_vector.x * sin(degreeToRadian(wheel_lr_angle * clkwise)) + forward_vector.y * cos(degreeToRadian(wheel_lr_angle * clkwise));
 
+    forward_vector.x = x;
+    forward_vector.y = y;
+
+    //change theta accordingly
+    //cos(theta) = a.b / |a|*|b|
+    double upor = (forward_vector.x * Xvec.x + forward_vector.y * Xvec.y + forward_vector.z * Xvec.z);
+    double nich = sqrt(forward_vector.x * forward_vector.x + forward_vector.y * forward_vector.y + forward_vector.z * forward_vector.z) * \
+                            sqrt(Xvec.x * Xvec.x + Xvec.y * Xvec.y + Xvec.z * Xvec.z);
+
+    theta = acos(upor / nich);
 }
 
-void move_left()
-{
+void move_left() {
+    //rotate forward_vector in 2D
+    double x = forward_vector.x * cos(degreeToRadian(wheel_lr_angle * anticlkwise)) - forward_vector.y * sin(degreeToRadian(wheel_lr_angle * anticlkwise));
+    double y = forward_vector.x * sin(degreeToRadian(wheel_lr_angle * anticlkwise)) + forward_vector.y * cos(degreeToRadian(wheel_lr_angle * anticlkwise));
 
+    forward_vector.x = x;
+    forward_vector.y = y;
+
+    //change theta accordingly
+    //cos(theta) = a.b / |a|*|b|
+    double upor = (forward_vector.x * Xvec.x + forward_vector.y * Xvec.y + forward_vector.z * Xvec.z);
+    double nich = sqrt(forward_vector.x * forward_vector.x + forward_vector.y * forward_vector.y + forward_vector.z * forward_vector.z) * \
+                            sqrt(Xvec.x * Xvec.x + Xvec.y * Xvec.y + Xvec.z * Xvec.z);
+
+    theta = acos(upor / nich);
 }
 
 void camera_move_left()
@@ -243,7 +274,13 @@ void camera_move_down(){
     pos.z -= camUpDownVal;
 }
 //===============================================
-
+void tester(){
+    glPushMatrix();
+    glTranslated(center.x, center.y, center.z);
+    glRotated(theta, 1,0,0);
+    drawSquare(10);
+    glPopMatrix();
+}
 
 void drawAxes()
 {
@@ -251,7 +288,7 @@ void drawAxes()
     {
         glBegin(GL_LINES);
         {
-            glColor3f(1.0, 1.0, 1.0);
+            glColor3f (1.0, 0.0, 0.0);
             glVertex3f(100, 0, 0);
             glColor3f (0.0, 1.0, 1.0);
             glVertex3f(-100, 0, 0);
@@ -295,11 +332,6 @@ void drawGrid()
         glEnd();
     }
 }
-
-//===============================================
-
-//===============================================
-
 
 void keyboardListener(unsigned char key, int x, int y)
 {
@@ -414,7 +446,7 @@ void display()
     drawAxes();
     drawGrid();
     drawWheel();
-
+//tester();
     //ADD this line in the end --- if you use double buffer (i.e. GL_DOUBLE)
     glutSwapBuffers();
 }
@@ -434,6 +466,14 @@ void init()
     cameraHeight = 150.0;
     cameraAngle = 1.0;
     angle = 0;
+
+    //-------------------------------------------
+    center = point(0.0, 0.0, wheelRadius);
+    theta = 0.0;
+    forward_vector = point(1.0, 0.0, 0.0);
+    Xvec = point(1.0, 0.0, 0.0);
+    wheel_rim_angle = 0.0;
+    //-------------------------------------------
 
     //clear the screen
     glClearColor(0, 0, 0, 0);
