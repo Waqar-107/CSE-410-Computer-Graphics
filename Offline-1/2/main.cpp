@@ -48,18 +48,6 @@ double wheel_rim_angle;
 
 
 //===============================================
-void drawSquare(double a)
-{
-    glBegin(GL_QUADS);
-    {
-        glVertex3f(a, a, 0);
-        glVertex3f(a, -a, 0);
-        glVertex3f(-a, -a, 0);
-        glVertex3f(-a, a, 0);
-    }
-    glEnd();
-}
-
 void drawCircle(double radius, int segments)
 {
     struct point points[100];
@@ -122,13 +110,12 @@ void drawWheel()
 
     glPushMatrix();
 
+    //when the wheel moves left or right
+    glRotatef(theta, 0, 0, 1);
 
    //when the wheel moves forward or backward
     glTranslated(center.x, center.y, center.z);
     glRotatef(wheel_rim_angle, 0, 1, 0);
-
-     //when the wheel moves left or right
-    glRotatef(theta, 0, 0, 1);
 
     //-------------------------------------------
     //draw circles
@@ -193,7 +180,7 @@ point subtract(point u, point v) {
 void move_forward()
 {
     center = add(center, forward_vector);
-
+pf(center);
     double dist = forward_vector.x * forward_vector.x + forward_vector.y * forward_vector.y + forward_vector.z * forward_vector.z;
     dist = sqrt(dist);
 
@@ -219,14 +206,9 @@ void move_right() {
 
     forward_vector.x = x;
     forward_vector.y = y;
-
-    //change theta accordingly
-    //cos(theta) = a.b / |a|*|b|
-    double upor = (forward_vector.x * Xvec.x + forward_vector.y * Xvec.y + forward_vector.z * Xvec.z);
-    double nich = sqrt(forward_vector.x * forward_vector.x + forward_vector.y * forward_vector.y + forward_vector.z * forward_vector.z) * \
-                            sqrt(Xvec.x * Xvec.x + Xvec.y * Xvec.y + Xvec.z * Xvec.z);
-
-    theta = acos(upor / nich);
+cout<<"right called\n";
+pf(forward_vector);
+    theta -= wheel_lr_angle;
 }
 
 void move_left() {
@@ -236,14 +218,9 @@ void move_left() {
 
     forward_vector.x = x;
     forward_vector.y = y;
-
-    //change theta accordingly
-    //cos(theta) = a.b / |a|*|b|
-    double upor = (forward_vector.x * Xvec.x + forward_vector.y * Xvec.y + forward_vector.z * Xvec.z);
-    double nich = sqrt(forward_vector.x * forward_vector.x + forward_vector.y * forward_vector.y + forward_vector.z * forward_vector.z) * \
-                            sqrt(Xvec.x * Xvec.x + Xvec.y * Xvec.y + Xvec.z * Xvec.z);
-
-    theta = acos(upor / nich);
+cout<<"left called\n";
+pf(forward_vector);
+    theta += wheel_lr_angle;
 }
 
 void camera_move_left()
@@ -274,13 +251,6 @@ void camera_move_down(){
     pos.z -= camUpDownVal;
 }
 //===============================================
-void tester(){
-    glPushMatrix();
-    glTranslated(center.x, center.y, center.z);
-    glRotated(theta, 1,0,0);
-    drawSquare(10);
-    glPopMatrix();
-}
 
 void drawAxes()
 {
@@ -446,7 +416,7 @@ void display()
     drawAxes();
     drawGrid();
     drawWheel();
-//tester();
+
     //ADD this line in the end --- if you use double buffer (i.e. GL_DOUBLE)
     glutSwapBuffers();
 }
