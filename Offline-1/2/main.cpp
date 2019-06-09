@@ -40,42 +40,14 @@ struct point
 
 //===============================================
 // variables
-point pos, U, R, L;
-point center, forward_vector, Xvec;
+point pos;
+point center, position_vector, dposition_vector;
 double theta;
 double wheel_rim_angle;
 //===============================================
 
 
 //===============================================
-void drawCircle(double radius, int segments)
-{
-    struct point points[100];
-
-    //generate points to draw in x-z plane
-    for(int i = 0; i < segments; i++)
-    {
-        // x = r * cos(theta)
-        // y = r * sin(theta)
-        points[i].x = radius * cos(((double) i / (double) segments) * 2 * pi);
-        points[i].z = radius * sin(((double) i / (double) segments) * 2 * pi);
-    }
-
-    //glColor3f (0.5, 0.5, 0.5);
-    glColor3f (0.0, 1.0, 1.0);
-
-    //draw segments using generated points
-    for (int i = 0; i < segments; i++)
-    {
-        glBegin(GL_LINES);
-        {
-            glVertex3f(points[i].x, 0, points[i].z);
-            glVertex3f(points[(i + 1) % segments].x, 0, points[i + 1].z);
-        }
-        glEnd();
-    }
-}
-
 void drawSides(double radius, int segments, int d)
 {
      struct point points[100];
@@ -84,7 +56,7 @@ void drawSides(double radius, int segments, int d)
     for(int i = 0; i < segments; i++)
     {
         points[i].x = radius * cos(((double) i / (double) segments) * 2 * pi);
-        points[i].z = radius * sin(((double) i / (double) segments) * 2 * pi);
+        points[i].y = radius * sin(((double) i / (double) segments) * 2 * pi);
     }
 
     //glColor3f (0.5, 0.5, 0.5);
@@ -94,13 +66,29 @@ void drawSides(double radius, int segments, int d)
     {
         glBegin(GL_QUADS);
         {
-            glVertex3f(points[i].x, d, points[i].z);
-            glVertex3f(points[i].x, -d, points[i].z);
-            glVertex3f(points[(i + 1) % segments].x, -d, points[(i + 1) % segments].z);
-            glVertex3f(points[(i + 1) % segments].x, d, points[(i + 1) % segments].z);
+            glVertex3f(points[i].x, points[i].y, -d);
+            glVertex3f(points[i].x, points[i].y, d);
+            glVertex3f(points[(i + 1) % segments].x, points[(i + 1) % segments].y, d);
+            glVertex3f(points[(i + 1) % segments].x, points[(i + 1) % segments].y, -d);
         }
         glEnd();
     }
+}
+
+void drawPosVec()
+{
+    glPushMatrix();
+    glRotated(theta, 0, 0, 1);
+    glColor3f (0.0, 1.0, 0.0);
+    glBegin(GL_LINES);
+    {
+        glVertex3f(0, 0, 0);
+        //glVertex3f(dposition_vector.x, dposition_vector.y, 0);
+        glVertex3f(100,0,0);
+    }
+    glEnd();
+
+    glPopMatrix();
 }
 
 void drawWheel()
@@ -110,25 +98,16 @@ void drawWheel()
 
     glPushMatrix();
 
-    //when the wheel moves left or right
-    glRotatef(theta, 0, 0, 1);
+    glRotated(theta, 0, 0, 1);
+    glTranslated(0, 0, r);
+	glRotated(90, 1, 0, 0) ;
 
-   //when the wheel moves forward or backward
-    glTranslated(center.x, center.y, center.z);
+   /*//when the wheel moves forward or backward
+    glTranslated(center.x, center.y, wheelRadius);
     glRotatef(wheel_rim_angle, 0, 1, 0);
 
-    //-------------------------------------------
-    //draw circles
-    glPushMatrix();
-    glTranslated(0, d, 0);
-    drawCircle(r, segments);
-    glPopMatrix();
-
-    glPushMatrix();
-    glTranslated(0, -d, 0);
-    drawCircle(r, segments);
-    glPopMatrix();
-    //-------------------------------------------
+    //when the wheel moves left or right
+    glRotated(theta, 0, 0, 1);*/
 
     //-------------------------------------------
     //draw the cylindrical part of the circle
@@ -140,19 +119,19 @@ void drawWheel()
     glColor3f (0.0, 1.0, 1.0);
     glBegin(GL_QUADS);
     {
-        glVertex3f(0, -d / 2, r);
-        glVertex3f(0, d / 2, r);
-        glVertex3f(0, d / 2, -r);
-        glVertex3f(0, -d / 2, -r);
+        glVertex3f(0, r, d / 2);
+        glVertex3f(0, r, -d / 2);
+        glVertex3f(0, -r, -d / 2);
+        glVertex3f(0, -r, d / 2);
     }
     glEnd();
 
     glBegin(GL_QUADS);
     {
-        glVertex3f(r, d / 2, 0);
-        glVertex3f(r, -d / 2, 0);
-        glVertex3f(-r, -d / 2, 0);
-        glVertex3f(-r, d / 2, 0);
+        glVertex3f(r, 0, d / 2);
+        glVertex3f(r, 0, -d / 2);
+        glVertex3f(-r, 0, -d / 2);
+        glVertex3f(-r, 0, d / 2);
     }
     glEnd();
     //-------------------------------------------
@@ -179,48 +158,64 @@ point subtract(point u, point v) {
 
 void move_forward()
 {
-    center = add(center, forward_vector);
-pf(center);
-    double dist = forward_vector.x * forward_vector.x + forward_vector.y * forward_vector.y + forward_vector.z * forward_vector.z;
-    dist = sqrt(dist);
+    /*center.x += position_vector.x;
+    center.y += position_vector.y;
 
-    //2 * pi * R = 360 =>
-    wheel_rim_angle += (360 * dist) / (2 * pi * wheelRadius);
+    wheel_rim_angle += (360 * position_vector.x) / (2 * pi * wheelRadius);*/
 }
 
 void move_backward()
 {
-    center = subtract(center, forward_vector);
+    /*center.x -= position_vector.x;
+    center.y -= position_vector.y;
 
-    double dist = forward_vector.x * forward_vector.x + forward_vector.y * forward_vector.y + forward_vector.z * forward_vector.z;
-    dist = sqrt(dist);
-
-    //2 * pi * R = 360 =>
-    wheel_rim_angle -= (360 * dist) / (2 * pi * wheelRadius);
+    wheel_rim_angle -= (360 * position_vector.x) / (2 * pi * wheelRadius);*/
 }
 
 void move_right() {
-    //rotate forward_vector in 2D
-    double x = forward_vector.x * cos(degreeToRadian(wheel_lr_angle * clkwise)) - forward_vector.y * sin(degreeToRadian(wheel_lr_angle * clkwise));
-    double y = forward_vector.x * sin(degreeToRadian(wheel_lr_angle * clkwise)) + forward_vector.y * cos(degreeToRadian(wheel_lr_angle * clkwise));
-
-    forward_vector.x = x;
-    forward_vector.y = y;
-cout<<"right called\n";
-pf(forward_vector);
     theta -= wheel_lr_angle;
+    if(theta < 0)
+        theta += 360.0;
+
+    //rotate position_vector in 2D
+    /*double x = position_vector.x * cos(degreeToRadian(wheel_lr_angle * anticlkwise)) - position_vector.y * sin(degreeToRadian(wheel_lr_angle * anticlkwise));
+    double y = position_vector.x * sin(degreeToRadian(wheel_lr_angle * anticlkwise)) + position_vector.y * cos(degreeToRadian(wheel_lr_angle * anticlkwise));
+
+    position_vector.x = x;
+    position_vector.y = y;
+
+    //rotate the position vector kept for visualization
+    x = dposition_vector.x * cos(degreeToRadian(wheel_lr_angle * anticlkwise)) - dposition_vector.y * sin(degreeToRadian(wheel_lr_angle * anticlkwise));
+    y = dposition_vector.x * sin(degreeToRadian(wheel_lr_angle * anticlkwise)) + dposition_vector.y * cos(degreeToRadian(wheel_lr_angle * anticlkwise));
+
+    dposition_vector.x = x;
+    dposition_vector.y = y;*/
 }
 
 void move_left() {
-    //rotate forward_vector in 2D
-    double x = forward_vector.x * cos(degreeToRadian(wheel_lr_angle * anticlkwise)) - forward_vector.y * sin(degreeToRadian(wheel_lr_angle * anticlkwise));
-    double y = forward_vector.x * sin(degreeToRadian(wheel_lr_angle * anticlkwise)) + forward_vector.y * cos(degreeToRadian(wheel_lr_angle * anticlkwise));
-
-    forward_vector.x = x;
-    forward_vector.y = y;
-cout<<"left called\n";
-pf(forward_vector);
     theta += wheel_lr_angle;
+    if(theta > 360)
+        theta -= 360.0;
+
+    //rotate position_vector in 2D
+    /*double x = position_vector.x * cos(degreeToRadian(wheel_lr_angle * clkwise)) - position_vector.y * sin(degreeToRadian(wheel_lr_angle * clkwise));
+    double y = position_vector.x * sin(degreeToRadian(wheel_lr_angle * clkwise)) + position_vector.y * cos(degreeToRadian(wheel_lr_angle * clkwise));
+
+    position_vector.x = x;
+    position_vector.y = y;
+
+    x = center.x * cos(degreeToRadian(wheel_lr_angle * clkwise)) - center.y * sin(degreeToRadian(wheel_lr_angle * clkwise));
+    y = center.x * sin(degreeToRadian(wheel_lr_angle * clkwise)) + center.y * cos(degreeToRadian(wheel_lr_angle * clkwise));
+
+    center.x = x;
+    center.y = y;
+
+    //rotate the position vector kept for visualization
+    x = dposition_vector.x * cos(degreeToRadian(wheel_lr_angle * clkwise)) - dposition_vector.y * sin(degreeToRadian(wheel_lr_angle * clkwise));
+    y = dposition_vector.x * sin(degreeToRadian(wheel_lr_angle * clkwise)) + dposition_vector.y * cos(degreeToRadian(wheel_lr_angle * clkwise));
+
+    dposition_vector.x = x;
+    dposition_vector.y = y;*/
 }
 
 void camera_move_left()
@@ -416,6 +411,7 @@ void display()
     drawAxes();
     drawGrid();
     drawWheel();
+    drawPosVec();
 
     //ADD this line in the end --- if you use double buffer (i.e. GL_DOUBLE)
     glutSwapBuffers();
@@ -440,8 +436,8 @@ void init()
     //-------------------------------------------
     center = point(0.0, 0.0, wheelRadius);
     theta = 0.0;
-    forward_vector = point(1.0, 0.0, 0.0);
-    Xvec = point(1.0, 0.0, 0.0);
+    position_vector = point(1.0, 0.0, 0.0);
+    dposition_vector = point(100, 0, 0);
     wheel_rim_angle = 0.0;
     //-------------------------------------------
 

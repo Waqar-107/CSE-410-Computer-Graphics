@@ -1,15 +1,18 @@
-#include <bits/stdc++.h>
-using namespace std ;
-//#include <windows.h>
+#include<bits/stdc++.h>
+#include <windows.h>
 #include <glut.h>
 
+#define pi (2*acos(0.0))
 #define M_PI (2*acos(0.0))
+
+using namespace std ;
+
 double cameraHeight;
 double cameraAngle;
 int drawgrid;
 int drawaxes;
 double angle;
-double radius1,radius2,side,radius3, rotateangle1,rotateangle2,rotateangle3;
+double wheel_angle ;
 struct Point
 {
     double x,y,z;
@@ -33,18 +36,6 @@ struct Point
     Point operator - (const Point &other)const{
         return Point(x-other.x,y-other.y,z-other.z) ;
     }
-    /*
-    void operator = (const Point &other)const{
-        x = other.x ;
-        y= other.y ;
-        z = other.z ;
-        return ;
-    }
-    */
-    void show(){
-        cout<<x<<" "<<y<<" "<<z<<endl ;
-       // cout<<(x*x+y*y+z*z)<<endl ;
-    }
     Point cross(Point &otherVector){
 
         double x = (y*otherVector.z-z*otherVector.y) ;
@@ -52,23 +43,31 @@ struct Point
         double z = (x*otherVector.y-otherVector.x*y) ;
         return Point(x,y,z) ;
     }
+    double dot(Point &otherVector){
+        return x*otherVector.x+y*otherVector.y+z*otherVector.z ;
+    }
+    void show(){
+        cout<<x<<" "<<y<<" "<<z<<endl ;
+    }
+
 };
+Point wheelCentre ,directionVector,fixedVector ;
 Point normalize(Point p){
-    double scale = 1/sqrt(p.x*p.x+p.y*p.y+p.z*p.z) ;
+    double scale = sqrt(p.x*p.x+p.y*p.y+p.z*p.z) ;
     return p*scale ;
 }
 Point Rotation(Point rotationVector,Point fixedVector,double rotationAngle){
-    fixedVector = normalize(fixedVector) ; // unit vector
-    Point perpendicular = fixedVector.cross(rotationVector) ;
+    Point _rotationVector = normalize(rotationVector) ;
+    Point _fixedVector = normalize(fixedVector) ; // unit vector
+    if(_rotationVector.dot(_fixedVector)!=0) cout<<"Thye are not perpendicur\n" ;
+    Point perpendicular = _fixedVector.cross(_rotationVector) ;
     return rotationVector*cos(rotationAngle)+perpendicular*sin(rotationAngle) ;
 }
 
-Point pos,u,l,r,normalizedu,normalizedl,normalizedr,unitDirectionVector1,unitDirectionVector2,topPoint1,topPoint2,fixedDirectionVector ;
+Point pos,u,l,r,normalizedu,normalizedl,normalizedr;
 
-void drawAxes()
-{
-	if(drawaxes==1)
-	{
+void drawAxes(){
+	if(drawaxes==1){
 		glColor3f(1.0, 1.0, 1.0);
 		glBegin(GL_LINES);{
 			glVertex3f( 100,0,0);
@@ -82,49 +81,106 @@ void drawAxes()
 		}glEnd();
 	}
 }
-void drawHand(double radius){
-    glTranslated(0,0,-radius) ;
-    glScaled((5/radius),(5/radius),1) ;
-    glutWireSphere(radius,15,15) ;
-    glScaled(radius/5,radius/5,1) ;
+void drawGrid(){
+	int i;
+	if(drawgrid==1){
+		glColor3f(0.6, 0.6, 0.6);	//grey
+		glBegin(GL_LINES);{
+			for(i=-8;i<=8;i++){
+
+				if(i==0)
+					continue;	//SKIP the MAIN axes
+
+				//lines parallel to Y-axis
+				glVertex3f(i*10, -90, 0);
+				glVertex3f(i*10,  90, 0);
+
+				//lines parallel to X-axis
+				glVertex3f(-90, i*10, 0);
+				glVertex3f( 90, i*10, 0);
+			}
+		}glEnd();
+	}
 }
-void drawTriangle(double side) //
-{
-        glColor3f(1.0, 1.0, 1.0);
-        glBegin(GL_TRIANGLES);{
-                glVertex3f(0,0,side/2) ;
-                glVertex3f(-side/2,0,0) ;
-                glVertex3f(side/2,0,0) ;
-        }glEnd() ;
+
+void draw_wheel(double x, double y, double radius){
+	int i;
+	int lineAmount = 100;
+	Point wheel[lineAmount][2] ;
+	GLfloat twicePi = 2.0f * M_PI;
+    for(i = 0; i <= lineAmount;i++) {
+                wheel[i][0] = Point(x + (radius * cos(i *  twicePi / lineAmount)),y + (radius* sin(i * twicePi / lineAmount)),wheelCentre.z) ;
+                wheel[i][1] = Point(x + (radius * cos(i *  twicePi / lineAmount)),y + (radius* sin(i * twicePi / lineAmount)),wheelCentre.z+5) ;
+                // now rotate the unit vector
+                // now add the rotated vector to this point
+               // /*
+          //      if(wheel_angle>360) wheel_angle-=360;
+            //    Point rotatedVector = Rotation(directionVector,fixedVector,wheel_angle) ;
+              //  wheel[i][0] = wheel[i][0]+rotatedVector*((wheel_angle*2*M_PI*radius)/360.00) ;
+               // wheel[i][1] = wheel[i][1]+rotatedVector*((wheel_angle*2*M_PI*radius)/360.00) ;
+                //*/
+    }
+    for(int i=0;i<lineAmount;i++){
+         glBegin(GL_QUADS);
+        {
+            glVertex3f(wheel[i][0].x,wheel[i][0].y,wheel[i][0].z);
+			glVertex3f(wheel[i][1].x,wheel[i][1].y,wheel[i][1].z);
+			glVertex3f(wheel[i+1][1].x,wheel[i+1][1].y,wheel[i+1][1].z);
+			glVertex3f(wheel[i+1][0].x,wheel[i+1][0].y,wheel[i+1][0].z);
+        }
+        glEnd();
+    }
+    glBegin(GL_QUADS);
+        {
+            glVertex3f(wheel[0][0].x,wheel[0][0].y,wheel[0][0].z);
+			glVertex3f(wheel[lineAmount/2][1].x,wheel[lineAmount/2][1].y,wheel[lineAmount/2][1].z);
+			glVertex3f(wheel[lineAmount/2][0].x,wheel[lineAmount/2][0].y,wheel[lineAmount/2][0].z);
+            glVertex3f(wheel[0][1].x,wheel[0][1].y,wheel[0][1].z);
+        }
+    glEnd();
+
+    glBegin(GL_QUADS);
+        {
+            glVertex3f(wheel[lineAmount/4][0].x,wheel[lineAmount/4][0].y,wheel[lineAmount/4][0].z);
+			glVertex3f(wheel[3*lineAmount/4][1].x,wheel[3*lineAmount/4][1].y,wheel[3*lineAmount/4][1].z);
+			glVertex3f(wheel[3*lineAmount/4][0].x,wheel[3*lineAmount/4][0].y,wheel[3*lineAmount/4][0].z);
+            glVertex3f(wheel[lineAmount/4][1].x,wheel[lineAmount/4][1].y,wheel[lineAmount/4][1].z);
+        }
+    glEnd();
+
 }
 void keyboardListener(unsigned char key, int x,int y){
 	switch(key){
 
 		case '1': // look up
-            rotateangle1++ ;
-            unitDirectionVector1 = Rotation(unitDirectionVector1,fixedDirectionVector,(rotateangle1*2*M_PI)/360.00) ;
-            unitDirectionVector1 = normalize(unitDirectionVector1) ;
-           // cout<<acos(unitDirectionVector1.z/unitDirectionVector1.x)<<endl ;
-            unitDirectionVector1.show() ;
-            topPoint2 = topPoint1+unitDirectionVector1*(2.00*radius1) ;
-            topPoint2.show() ;
-            //unitDirectionVector2 = unitDirectionVector1 ;
+            u = Rotation(u,r,(pi/180)*3) ;
+            l = Rotation(l,r,(pi/180)*3) ;
 			break;
         case '2':
-             rotateangle1-- ;
+            u = Rotation(u,r,-(pi/180)*3) ;
+            l = Rotation(l,r,-(pi/180)*3) ;
             break ;
         case '3':
-            rotateangle2++ ;
-            unitDirectionVector1 = Rotation(unitDirectionVector2,fixedDirectionVector,rotateangle2) ;
+            l = Rotation(l,u,(pi/180)*3) ;
+            r = Rotation(r,u,(pi/180)*3) ;
             break ;
         case '4':
-            rotateangle2-- ;
+            l = Rotation(l,u,-(pi/180)*3) ;
+            r = Rotation(r,u,-(pi/180)*3) ;
             break ;
-        case '5':
-            rotateangle3++ ;
+        case 'w':
+            wheelCentre.x =  wheelCentre.x+directionVector.x*2 ;
             break ;
-        case '6':
-            rotateangle3-- ;
+        case 's':
+            wheelCentre.x =  wheelCentre.x-directionVector.x*2 ;
+            break ;
+        case 'a':
+            wheel_angle++ ;
+            wheelCentre = Rotation(directionVector,fixedVector,wheel_angle*(360/2*M_PI)) ;
+            break ;
+        case 'd':
+            wheel_angle-- ;
+            wheelCentre = Rotation(directionVector,fixedVector,wheel_angle*(360/2*M_PI)) ;
             break ;
 		default:
 			break;
@@ -170,6 +226,8 @@ void specialKeyListener(int key, int x,int y){
 			break;
 	}
 }
+
+
 void mouseListener(int button, int state, int x, int y){	//x, y is the x-y of the screen (2D)
 	switch(button){
 		case GLUT_LEFT_BUTTON:
@@ -200,7 +258,7 @@ void display(){
 	glClearColor(0,0,0,0);	//color black
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	/********************jinis
+	/********************
 	/ set-up camera here
 	********************/
 	//load the correct matrix -- MODEL-VIEW matrix
@@ -214,7 +272,7 @@ void display(){
 	//2. where is the camera looking?
 	//3. Which direction is the camera's UP direction?
 
-	gluLookAt(pos.x,pos.y,pos.z, pos.x+l.x,pos.y+l.y,pos.z+l.z,u.x,u.y,u.z);
+	gluLookAt(pos.x,pos.y,pos.z+50, pos.x+l.x,pos.y+l.y,pos.z+l.z+50,u.x,u.y,u.z);
 	//gluLookAt(200*cos(cameraAngle), 200*sin(cameraAngle), cameraHeight,		0,0,0,		0,0,1);
 	//gluLookAt(0,0,200,	0,0,0,	0,1,0);
 
@@ -229,26 +287,13 @@ void display(){
 	//add objects
 
 	drawAxes();
-	glRotated(rotateangle1,1,0,0) ;
-//	glTranslated(0,0,-radius1) ;
-	drawHand(radius1) ;
-	glTranslated(0,0,-radius1) ;
-	glRotated(rotateangle2,1,0,0) ;
-	drawHand(radius2) ;
-	glTranslated(0,0,-radius2-side/2) ;
-	drawTriangle(side) ;
-	glTranslated(-side/2,0,0) ;
-	glRotated(rotateangle3,1,0,0) ;
-	glScaled(.2,.2,1) ;
-	drawHand(radius3) ;
-//	glRotated(-rotateangle3,1,0,0) ;
-	glTranslated(2.5*side,0,radius3) ;
-	//glRotated(rotateangle3,1,0,0) ;
-	drawHand(radius3) ;
-	glTranslated(2*side,0,radius3) ;
-	drawHand(radius3) ;
+	drawGrid();
 
-	//ADD this line in the end --- if you use double buffer (i.e. GL_DOUBLE)
+    glRotated(wheel_angle,0,0,1) ;
+	glTranslated(0,0,25) ;
+	glRotated(90,1,0,0) ;
+    draw_wheel(wheelCentre.x,wheelCentre.y,25) ;
+
 	glutSwapBuffers();
 }
 
@@ -261,8 +306,8 @@ void animate(){
 
 void init(){
 	//codes for initialization
-	drawgrid=0;
-	drawaxes=1;
+	drawgrid=1;
+	//drawaxes=1;
 	cameraHeight=150.0;
 	cameraAngle=1.0;
 	angle=0;
@@ -284,20 +329,14 @@ void init(){
 	normalizedu = normalize(u) ;
 	normalizedr = normalize(r) ;
 	glClearColor(0,0,0,0);
-	radius1=30 ;
-    radius2=20 ;
-    radius3=5 ;
-	side=10 ;
-    rotateangle1= 0 ;
-    rotateangle2=0 ;
-    rotateangle3=0 ;
-    fixedDirectionVector.y=1 ;
-    fixedDirectionVector.x=fixedDirectionVector.z=0 ;
-	unitDirectionVector1.x=unitDirectionVector1.y=0 ;
-	unitDirectionVector1.z=-1 ;
-	unitDirectionVector2 = unitDirectionVector1 ;
-	topPoint1 = Point(0,0,0) ;
-	topPoint2 = Point(0,0,-2*radius1) ;
+
+	////////////////////////////wheel............................/////////
+    wheelCentre.x=wheelCentre.y=wheelCentre.z =0;
+	wheel_angle= 0 ;
+	directionVector.x=1 ;
+	directionVector.y=directionVector.z=0 ;
+	fixedVector.x=fixedVector.y=0 ;
+	fixedVector.z=1 ;
 	/************************
 	/ set-up projection here
 	************************/
@@ -315,26 +354,27 @@ void init(){
 	//far distance
 }
 
-int main(int argc, char **argv){
-	glutInit(&argc,argv);
-	glutInitWindowSize(500, 500);
-	glutInitWindowPosition(0, 0);
-	glutInitDisplayMode(GLUT_DEPTH | GLUT_DOUBLE | GLUT_RGB);	//Depth, Double buffer, RGB color
+int main(int argc, char **argv)
+{
+    glutInit(&argc, argv);
+    glutInitWindowSize(500, 500);
+    glutInitWindowPosition(0, 0);
+    glutInitDisplayMode(GLUT_DEPTH | GLUT_DOUBLE | GLUT_RGB);    //Depth, Double buffer, RGB color
 
-	glutCreateWindow("Task 4 ");
+    glutCreateWindow("wheel movement");
 
-	init();
+    init();
 
-	glEnable(GL_DEPTH_TEST);	//enable Depth Testing
+    glEnable(GL_DEPTH_TEST);    //enable Depth Testing
 
-	glutDisplayFunc(display);	//display callback function
-	glutIdleFunc(animate);		//what you want to do in the idle time (when no drawing is occuring)
+    glutDisplayFunc(display);    //display callback function
+    glutIdleFunc(animate);        //what you want to do in the idle time (when no drawing is occuring)
 
-	glutKeyboardFunc(keyboardListener);
-	glutSpecialFunc(specialKeyListener);
-	glutMouseFunc(mouseListener);
+    glutKeyboardFunc(keyboardListener);
+    glutSpecialFunc(specialKeyListener);
+    glutMouseFunc(mouseListener);
 
-	glutMainLoop();		//The main loop of OpenGL
+    glutMainLoop();        //The main loop of OpenGL
 
-	return 0;
+    return 0;
 }
