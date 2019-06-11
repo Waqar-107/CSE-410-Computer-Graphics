@@ -41,7 +41,7 @@ struct point
 //===============================================
 // variables
 point pos;
-point center, position_vector, dposition_vector;
+point center, position_vector;
 double theta;
 double wheel_rim_angle;
 //===============================================
@@ -98,16 +98,16 @@ void drawWheel()
 
     glPushMatrix();
 
-    glRotated(theta, 0, 0, 1);
-    glTranslated(0, 0, r);
-	glRotated(90, 1, 0, 0) ;
-
-   /*//when the wheel moves forward or backward
-    glTranslated(center.x, center.y, wheelRadius);
-    glRotatef(wheel_rim_angle, 0, 1, 0);
-
     //when the wheel moves left or right
-    glRotated(theta, 0, 0, 1);*/
+    glRotated(theta, 0, 0, 1);
+
+    glTranslated(0, 0, r);
+	glRotated(90, 1, 0, 0);         //drawn in x-y plane, make it as if it is x-z
+
+   //when the wheel moves forward or backward
+    glRotatef(wheel_rim_angle, 0, 1, 0);
+    glTranslated(center.x, center.y, 0);
+
 
     //-------------------------------------------
     //draw the cylindrical part of the circle
@@ -158,18 +158,18 @@ point subtract(point u, point v) {
 
 void move_forward()
 {
-    /*center.x += position_vector.x;
+    center.x += position_vector.x;
     center.y += position_vector.y;
 
-    wheel_rim_angle += (360 * position_vector.x) / (2 * pi * wheelRadius);*/
+    wheel_rim_angle += (360 * position_vector.x) / (2 * pi * wheelRadius);
 }
 
 void move_backward()
 {
-    /*center.x -= position_vector.x;
+    center.x -= position_vector.x;
     center.y -= position_vector.y;
 
-    wheel_rim_angle -= (360 * position_vector.x) / (2 * pi * wheelRadius);*/
+    wheel_rim_angle -= (360 * position_vector.x) / (2 * pi * wheelRadius);
 }
 
 void move_right() {
@@ -178,18 +178,11 @@ void move_right() {
         theta += 360.0;
 
     //rotate position_vector in 2D
-    /*double x = position_vector.x * cos(degreeToRadian(wheel_lr_angle * anticlkwise)) - position_vector.y * sin(degreeToRadian(wheel_lr_angle * anticlkwise));
+    double x = position_vector.x * cos(degreeToRadian(wheel_lr_angle * anticlkwise)) - position_vector.y * sin(degreeToRadian(wheel_lr_angle * anticlkwise));
     double y = position_vector.x * sin(degreeToRadian(wheel_lr_angle * anticlkwise)) + position_vector.y * cos(degreeToRadian(wheel_lr_angle * anticlkwise));
 
     position_vector.x = x;
     position_vector.y = y;
-
-    //rotate the position vector kept for visualization
-    x = dposition_vector.x * cos(degreeToRadian(wheel_lr_angle * anticlkwise)) - dposition_vector.y * sin(degreeToRadian(wheel_lr_angle * anticlkwise));
-    y = dposition_vector.x * sin(degreeToRadian(wheel_lr_angle * anticlkwise)) + dposition_vector.y * cos(degreeToRadian(wheel_lr_angle * anticlkwise));
-
-    dposition_vector.x = x;
-    dposition_vector.y = y;*/
 }
 
 void move_left() {
@@ -198,24 +191,11 @@ void move_left() {
         theta -= 360.0;
 
     //rotate position_vector in 2D
-    /*double x = position_vector.x * cos(degreeToRadian(wheel_lr_angle * clkwise)) - position_vector.y * sin(degreeToRadian(wheel_lr_angle * clkwise));
+    double x = position_vector.x * cos(degreeToRadian(wheel_lr_angle * clkwise)) - position_vector.y * sin(degreeToRadian(wheel_lr_angle * clkwise));
     double y = position_vector.x * sin(degreeToRadian(wheel_lr_angle * clkwise)) + position_vector.y * cos(degreeToRadian(wheel_lr_angle * clkwise));
 
     position_vector.x = x;
     position_vector.y = y;
-
-    x = center.x * cos(degreeToRadian(wheel_lr_angle * clkwise)) - center.y * sin(degreeToRadian(wheel_lr_angle * clkwise));
-    y = center.x * sin(degreeToRadian(wheel_lr_angle * clkwise)) + center.y * cos(degreeToRadian(wheel_lr_angle * clkwise));
-
-    center.x = x;
-    center.y = y;
-
-    //rotate the position vector kept for visualization
-    x = dposition_vector.x * cos(degreeToRadian(wheel_lr_angle * clkwise)) - dposition_vector.y * sin(degreeToRadian(wheel_lr_angle * clkwise));
-    y = dposition_vector.x * sin(degreeToRadian(wheel_lr_angle * clkwise)) + dposition_vector.y * cos(degreeToRadian(wheel_lr_angle * clkwise));
-
-    dposition_vector.x = x;
-    dposition_vector.y = y;*/
 }
 
 void camera_move_left()
@@ -437,7 +417,6 @@ void init()
     center = point(0.0, 0.0, wheelRadius);
     theta = 0.0;
     position_vector = point(1.0, 0.0, 0.0);
-    dposition_vector = point(100, 0, 0);
     wheel_rim_angle = 0.0;
     //-------------------------------------------
 

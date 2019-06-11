@@ -292,52 +292,30 @@ void drawSphere(double radius, int slices, int stacks)
     }
 }
 
-
 void drawCylinder(double radius, double height)
 {
-    struct point points[100][100];
-    int i, j;
-    double h, r;
-
-    double stacks = 75, slices = 75;
+    point points[300];
+    int segments = 300;
 
     //generate points
-    for (i = 0; i <= stacks; i++)
+    for(int i = 0; i < segments; i++)
     {
-        h = height * sin(((double) i / (double) stacks) * (pi / 2));
-        r = radius;
-        for (j = 0; j <= slices; j++)
-        {
-            points[i][j].x = r * cos(((double) j / (double) slices) * (pi / 2));
-            points[i][j].y = r * sin(((double) j / (double) slices) * (pi / 2));
-            points[i][j].z = h;
-        }
+        points[i].x = radius * cos(((double) i / (double) segments) * (pi / 2 + 0.01));
+        points[i].y = radius * sin(((double) i / (double) segments) * (pi / 2 + 0.01));
     }
 
-    //draw quads using generated points
-    for (i = 0; i < stacks; i++)
+    for(int i = 0; i < segments - 1; i++)
     {
-        for (j = 0; j < slices; j++)
+        glBegin(GL_QUADS);
         {
-            glBegin(GL_QUADS);
-            {
-                //upper hemisphere
-                glVertex3f(points[i][j].x, points[i][j].y, points[i][j].z);
-                glVertex3f(points[i][j + 1].x, points[i][j + 1].y, points[i][j + 1].z);
-                glVertex3f(points[i + 1][j + 1].x, points[i + 1][j + 1].y, points[i + 1][j + 1].z);
-                glVertex3f(points[i + 1][j].x, points[i + 1][j].y, points[i + 1][j].z);
-
-                //lower hemisphere
-                glVertex3f(points[i][j].x, points[i][j].y, -points[i][j].z);
-                glVertex3f(points[i][j + 1].x, points[i][j + 1].y, -points[i][j + 1].z);
-                glVertex3f(points[i + 1][j + 1].x, points[i + 1][j + 1].y, -points[i + 1][j + 1].z);
-                glVertex3f(points[i + 1][j].x, points[i + 1][j].y, -points[i + 1][j].z);
-            }
-            glEnd();
+            glVertex3f(points[i].x, points[i].y, 0);
+            glVertex3f(points[i].x, points[i].y, height);
+            glVertex3f(points[i + 1].x, points[i + 1].y, height);
+            glVertex3f(points[i + 1].x, points[i + 1].y, 0);
         }
+        glEnd();
     }
 }
-
 
 void drawResizableQube()
 {
@@ -454,85 +432,85 @@ void drawResizableCylinder()
     //-----------------------------------------------------
     //sides
     glPushMatrix();
-    glTranslated(h, h, 0);
-    drawCylinder(r, h);
+    glTranslated(h, h, -h);
+    drawCylinder(r, h * 2);
     glPopMatrix();
 
     glPushMatrix();
-    glTranslated(-h, h, 0);
+    glTranslated(-h, h, -h);
     glRotated(90, 0, 0, 1);
-    drawCylinder(r, h);
+    drawCylinder(r, h * 2);
     glPopMatrix();
 
     glPushMatrix();
-    glTranslated(h, -h, 0);
+    glTranslated(h, -h, -h);
     glRotated(-90, 0, 0, 1);
-    drawCylinder(r, h);
+    drawCylinder(r, h * 2);
     glPopMatrix();
 
     glPushMatrix();
-    glTranslated(-h, -h, 0);
+    glTranslated(-h, -h, -h);
     glRotated(180, 0, 0, 1);
-    drawCylinder(r, h);
+    drawCylinder(r, h * 2);
     glPopMatrix();
     //-----------------------------------------------------
 
     //-----------------------------------------------------
     //top
     glPushMatrix();
-    glTranslated(0, h, h);
+    glTranslated(h, h, h);
     glRotated(-90, 0, 1, 0);
-    drawCylinder(r, h);
+    drawCylinder(r, h * 2);
     glPopMatrix();
 
     glPushMatrix();
-    glTranslated(-h, 0, h);
+    glTranslated(-h, h, h);
     glRotated(-90, 0, 1, 0);
     glRotated(90, 1, 0, 0);
-    drawCylinder(r, h);
+    drawCylinder(r, h * 2);
     glPopMatrix();
 
     glPushMatrix();
-    glTranslated(0, -h, h);
+    glTranslated(h, -h, h);
     glRotated(-90, 0, 1, 0);
     glRotated(270, 0, 0, 1);
-    drawCylinder(r, h);
+    drawCylinder(r, h * 2);
     glPopMatrix();
 
     glPushMatrix();
-    glTranslated(h, 0, h);
+    glTranslated(h, h, h);
     glRotated(90, 1, 0, 0);
-    drawCylinder(r, h);
+    drawCylinder(r, h * 2);
     glPopMatrix();
     //-----------------------------------------------------
 
     //-----------------------------------------------------
     //bottom
     glPushMatrix();
-    glTranslated(0, h, -h);
+    glTranslated(-h, h, -h);
     glRotated(90, 0, 1, 0);
-    drawCylinder(r, h);
+    drawCylinder(r, h * 2);
     glPopMatrix();
 
     glPushMatrix();
-    glTranslated(-h, 0, -h);
+    glTranslated(-h, -h, -h);
     glRotated(90, 0, 1, 0);
     glRotated(-90, 1, 0, 0);
-    drawCylinder(r, h);
+    drawCylinder(r, h * 2);
     glPopMatrix();
 
     glPushMatrix();
-    glTranslated(0, -h, -h);
+    glTranslated(-h, -h, -h);
     glRotated(90, 0, 1, 0);
     glRotated(270, 0, 0, 1);
-    drawCylinder(r, h);
+    drawCylinder(r, h * 2);
     glPopMatrix();
 
     glPushMatrix();
-    glTranslated(h, 0, -h);
+    glTranslated(h, h, -h);
     glRotated(90, 0, 1, 0);
     glRotated(90, 1, 0, 0);
-    drawCylinder(r, h);
+    drawCylinder(r, h * 2);
     glPopMatrix();
     //-----------------------------------------------------
 }
@@ -665,9 +643,10 @@ void display()
     / Add your objects from here
     ****************************/
     drawAxes();
-    drawResizableQube();
-    drawResizableSphere();
     drawResizableCylinder();
+    drawResizableSphere();
+    drawResizableQube();
+
 
     //ADD this line in the end --- if you use double buffer (i.e. GL_DOUBLE)
     glutSwapBuffers();
