@@ -48,18 +48,17 @@ double wheel_rim_angle;
 
 
 //===============================================
-void drawSides(double radius, int segments, int d)
+void drawSides(double cx, double cy, double radius, int segments, int d)
 {
      struct point points[100];
 
     //generate points to draw in x-z plane
     for(int i = 0; i < segments; i++)
     {
-        points[i].x = radius * cos(((double) i / (double) segments) * 2 * pi);
-        points[i].y = radius * sin(((double) i / (double) segments) * 2 * pi);
+        points[i].x = cx + radius * cos(((double) i / (double) segments) * 2 * pi);
+        points[i].y = cy + radius * sin(((double) i / (double) segments) * 2 * pi);
     }
 
-    //glColor3f (0.5, 0.5, 0.5);
     glColor3f (0.0, 1.0, 1.0);
 
     for(int i = 0; i < segments; i++)
@@ -98,20 +97,24 @@ void drawWheel()
 
     glPushMatrix();
 
-    //when the wheel moves left or right
-    glRotated(theta, 0, 0, 1);
+    //glRotated(90, 1, 0, 0);          //drawn in x-y plane, make it standing on x-y
+    //glTranslated(0, 0, r);             //the center is in 0,0,0 place the wheel on surface
 
-    glTranslated(0, 0, r);
-	glRotated(90, 1, 0, 0);         //drawn in x-y plane, make it as if it is x-z
 
-   //when the wheel moves forward or backward
-    glRotatef(wheel_rim_angle, 0, 1, 0);
+    //forward-backward
     glTranslated(center.x, center.y, 0);
+
+    //when the wheel moves left or right
+    glRotated(theta, 0, 1, 0);
+
+
+    //when the wheel moves forward or backward
+    //glRotatef(wheel_rim_angle, 0, 1, 0);
 
 
     //-------------------------------------------
     //draw the cylindrical part of the circle
-    drawSides(r, segments, d);
+    drawSides(center.x, center.y, r, segments, d);
     //-------------------------------------------
 
     //-------------------------------------------
@@ -119,19 +122,19 @@ void drawWheel()
     glColor3f (0.0, 1.0, 1.0);
     glBegin(GL_QUADS);
     {
-        glVertex3f(0, r, d / 2);
-        glVertex3f(0, r, -d / 2);
-        glVertex3f(0, -r, -d / 2);
-        glVertex3f(0, -r, d / 2);
+        glVertex3f(center.x, center.y + r, d / 2);
+        glVertex3f(center.x, center.y + r, -d / 2);
+        glVertex3f(center.x, center.y - r, -d / 2);
+        glVertex3f(center.x, center.y - r, d / 2);
     }
     glEnd();
 
     glBegin(GL_QUADS);
     {
-        glVertex3f(r, 0, d / 2);
-        glVertex3f(r, 0, -d / 2);
-        glVertex3f(-r, 0, -d / 2);
-        glVertex3f(-r, 0, d / 2);
+        glVertex3f(center.x + r, center.y, d / 2);
+        glVertex3f(center.x + r, center.y, -d / 2);
+        glVertex3f(center.x - r, center.y, -d / 2);
+        glVertex3f(center.x - r, center.y, d / 2);
     }
     glEnd();
     //-------------------------------------------
@@ -392,6 +395,7 @@ void display()
     drawGrid();
     drawWheel();
     drawPosVec();
+
 
     //ADD this line in the end --- if you use double buffer (i.e. GL_DOUBLE)
     glutSwapBuffers();
