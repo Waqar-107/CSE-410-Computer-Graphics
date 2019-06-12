@@ -7,6 +7,7 @@
 #define pi (2*acos(0.0))
 
 #define wheel_lr_angle 3
+#define wheel_fb_dist 2
 
 #define camRotateVal 1
 #define camUpDownVal 1
@@ -41,22 +42,21 @@ struct point
 //===============================================
 // variables
 point pos;
-point center, position_vector;
-double theta;
-double wheel_rim_angle;
+point center;
+double theta, wheel_rim_angle, wheel_distance;
 //===============================================
 
 
 //===============================================
-void drawSides(double cx, double cy, double radius, int segments, int d)
+void drawSides(double radius, int segments, int d)
 {
      struct point points[100];
 
     //generate points to draw in x-z plane
     for(int i = 0; i < segments; i++)
     {
-        points[i].x = cx + radius * cos(((double) i / (double) segments) * 2 * pi);
-        points[i].y = cy + radius * sin(((double) i / (double) segments) * 2 * pi);
+        points[i].x = radius * cos(((double) i / (double) segments) * 2 * pi);
+        points[i].z = radius * sin(((double) i / (double) segments) * 2 * pi);
     }
 
     glColor3f (0.0, 1.0, 1.0);
@@ -65,29 +65,13 @@ void drawSides(double cx, double cy, double radius, int segments, int d)
     {
         glBegin(GL_QUADS);
         {
-            glVertex3f(points[i].x, points[i].y, -d);
-            glVertex3f(points[i].x, points[i].y, d);
-            glVertex3f(points[(i + 1) % segments].x, points[(i + 1) % segments].y, d);
-            glVertex3f(points[(i + 1) % segments].x, points[(i + 1) % segments].y, -d);
+            glVertex3f(points[i].x, -d, points[i].z + wheelRadius);
+            glVertex3f(points[i].x, d, points[i].z + wheelRadius);
+            glVertex3f(points[(i + 1) % segments].x, d, points[(i + 1) % segments].z + wheelRadius);
+            glVertex3f(points[(i + 1) % segments].x, -d, points[(i + 1) % segments].z + wheelRadius);
         }
         glEnd();
     }
-}
-
-void drawPosVec()
-{
-    glPushMatrix();
-    glRotated(theta, 0, 0, 1);
-    glColor3f (0.0, 1.0, 0.0);
-    glBegin(GL_LINES);
-    {
-        glVertex3f(0, 0, 0);
-        //glVertex3f(dposition_vector.x, dposition_vector.y, 0);
-        glVertex3f(100,0,0);
-    }
-    glEnd();
-
-    glPopMatrix();
 }
 
 void drawWheel()
@@ -97,24 +81,10 @@ void drawWheel()
 
     glPushMatrix();
 
-    //glRotated(90, 1, 0, 0);          //drawn in x-y plane, make it standing on x-y
-    //glTranslated(0, 0, r);             //the center is in 0,0,0 place the wheel on surface
-
-
-    //forward-backward
-    glTranslated(center.x, center.y, 0);
-
-    //when the wheel moves left or right
-    glRotated(theta, 0, 1, 0);
-
-
-    //when the wheel moves forward or backward
-    //glRotatef(wheel_rim_angle, 0, 1, 0);
-
-
     //-------------------------------------------
-    //draw the cylindrical part of the circle
-    drawSides(center.x, center.y, r, segments, d);
+    //first rotate then translate -> execution order
+    glTranslated(center.x, center.y, 0);       //move the wheel
+    glRotated(theta, 0, 0, 1);                      //rotate the wheel
     //-------------------------------------------
 
     //-------------------------------------------
@@ -122,28 +92,32 @@ void drawWheel()
     glColor3f (0.0, 1.0, 1.0);
     glBegin(GL_QUADS);
     {
-        glVertex3f(center.x, center.y + r, d / 2);
-        glVertex3f(center.x, center.y + r, -d / 2);
-        glVertex3f(center.x, center.y - r, -d / 2);
-        glVertex3f(center.x, center.y - r, d / 2);
+        glVertex3f(0, -d / 2, 0);
+        glVertex3f(0, -d / 2, 2 * wheelRadius);
+        glVertex3f(0, d / 2, 2 * wheelRadius);
+        glVertex3f(0, d / 2, 0);
     }
     glEnd();
 
     glBegin(GL_QUADS);
     {
-        glVertex3f(center.x + r, center.y, d / 2);
-        glVertex3f(center.x + r, center.y, -d / 2);
-        glVertex3f(center.x - r, center.y, -d / 2);
-        glVertex3f(center.x - r, center.y, d / 2);
+        glVertex3f(wheelRadius, d / 2, wheelRadius);
+        glVertex3f(-wheelRadius, d / 2, wheelRadius);
+        glVertex3f(-wheelRadius, -d / 2, wheelRadius);
+        glVertex3f(wheelRadius, -d / 2, wheelRadius);
     }
     glEnd();
+    //-------------------------------------------
+
+    //-------------------------------------------
+    //draw the cylindrical part of the circle
+    drawSides(r, segments, d);
     //-------------------------------------------
 
     glPopMatrix();
 }
 
-float degreeToRadian(float deg)
-{
+float degreeToRadian(float deg) {
     return (pi * deg) / 180;
 }
 
@@ -151,54 +125,30 @@ void pf(point x){
     cout<<x.x<<" "<<x.y<<" "<<x.z<<endl;
 }
 
-point add(point u, point v) {
-    return point(u.x + v.x, u.y + v.y, u.z + v.z);
-}
-
-point subtract(point u, point v) {
-    return point(u.x - v.x, u.y - v.y, u.z - v.z);
-}
-
 void move_forward()
 {
-    center.x += position_vector.x;
-    center.y += position_vector.y;
+    center.x += wheel_fb_dist * cos(degreeToRadian(theta));
+    center.y += wheel_fb_dist * sin(degreeToRadian(theta));
 
-    wheel_rim_angle += (360 * position_vector.x) / (2 * pi * wheelRadius);
+    wheel_distance += wheel_fb_dist;
+    wheel_rim_angle = (360 * wheel_distance) / (2 * pi * wheelRadius);
 }
 
 void move_backward()
 {
-    center.x -= position_vector.x;
-    center.y -= position_vector.y;
+    center.x -= wheel_fb_dist * cos(degreeToRadian(theta));
+    center.y -= wheel_fb_dist * sin(degreeToRadian(theta));
 
-    wheel_rim_angle -= (360 * position_vector.x) / (2 * pi * wheelRadius);
+    wheel_distance -= wheel_fb_dist;
+    wheel_rim_angle = (360 * wheel_distance) / (2 * pi * wheelRadius);
 }
 
 void move_right() {
     theta -= wheel_lr_angle;
-    if(theta < 0)
-        theta += 360.0;
-
-    //rotate position_vector in 2D
-    double x = position_vector.x * cos(degreeToRadian(wheel_lr_angle * anticlkwise)) - position_vector.y * sin(degreeToRadian(wheel_lr_angle * anticlkwise));
-    double y = position_vector.x * sin(degreeToRadian(wheel_lr_angle * anticlkwise)) + position_vector.y * cos(degreeToRadian(wheel_lr_angle * anticlkwise));
-
-    position_vector.x = x;
-    position_vector.y = y;
 }
 
 void move_left() {
     theta += wheel_lr_angle;
-    if(theta > 360)
-        theta -= 360.0;
-
-    //rotate position_vector in 2D
-    double x = position_vector.x * cos(degreeToRadian(wheel_lr_angle * clkwise)) - position_vector.y * sin(degreeToRadian(wheel_lr_angle * clkwise));
-    double y = position_vector.x * sin(degreeToRadian(wheel_lr_angle * clkwise)) + position_vector.y * cos(degreeToRadian(wheel_lr_angle * clkwise));
-
-    position_vector.x = x;
-    position_vector.y = y;
 }
 
 void camera_move_left()
@@ -229,6 +179,16 @@ void camera_move_down(){
     pos.z -= camUpDownVal;
 }
 //===============================================
+void drawSquare(double a)
+{
+    //glColor3f(1.0,0.0,0.0);
+	glBegin(GL_QUADS);{
+		glVertex3f( a, a,0);
+		glVertex3f( a,-a,0);
+		glVertex3f(-a,-a,0);
+		glVertex3f(-a, a,0);
+	}glEnd();
+}
 
 void drawAxes()
 {
@@ -394,8 +354,6 @@ void display()
     drawAxes();
     drawGrid();
     drawWheel();
-    drawPosVec();
-
 
     //ADD this line in the end --- if you use double buffer (i.e. GL_DOUBLE)
     glutSwapBuffers();
@@ -419,9 +377,12 @@ void init()
 
     //-------------------------------------------
     center = point(0.0, 0.0, wheelRadius);
+
     theta = 0.0;
-    position_vector = point(1.0, 0.0, 0.0);
     wheel_rim_angle = 0.0;
+    wheel_distance = 0.0;
+    //pos = point(200*cos(cameraAngle), 200*sin(cameraAngle), cameraHeight);
+    pos = point(70.0, 70.0, 100.0);
     //-------------------------------------------
 
     //clear the screen
@@ -441,9 +402,6 @@ void init()
     //field of view in the Y (vertically)
     //aspect ratio that determines the field of view in the X direction (horizontally)
     //near distance and far distance
-
-    //pos = point(200*cos(cameraAngle), 200*sin(cameraAngle), cameraHeight);
-    pos = point(70.0, 70.0, 100.0);
 }
 
 int main(int argc, char **argv)
