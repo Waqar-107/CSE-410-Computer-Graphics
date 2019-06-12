@@ -44,6 +44,7 @@ struct point
 point pos;
 point center;
 double theta, wheel_rim_angle, wheel_distance;
+double color_table[8][3];
 //===============================================
 
 
@@ -59,12 +60,20 @@ void drawSides(double radius, int segments, int d)
         points[i].z = radius * sin(((double) i / (double) segments) * 2 * pi);
     }
 
-    glColor3f (0.0, 1.0, 1.0);
+    //glColor3f (0.0, 1.0, 1.0);
 
+    double r = 0.3, g = 0.3, b = 0.3;
     for(int i = 0; i < segments; i++)
     {
         glBegin(GL_QUADS);
         {
+            glColor3d(r, g, b);
+            if((i + 1) % 2 == 0)
+                r += 0.05, g += 0.05, b += 0.05;
+
+            if(r >= 1.0)
+                r = 0.3, g = 0.3, b = 0.3;
+
             glVertex3f(points[i].x, -d, points[i].z + wheelRadius);
             glVertex3f(points[i].x, d, points[i].z + wheelRadius);
             glVertex3f(points[(i + 1) % segments].x, d, points[(i + 1) % segments].z + wheelRadius);
@@ -89,7 +98,7 @@ void drawWheel()
 
     //-------------------------------------------
     //the rims inside the wheel
-    glColor3f (0.0, 1.0, 1.0);
+    glColor3f (0.5, 0.5, 0.5);
     glBegin(GL_QUADS);
     {
         glVertex3f(0, -d / 2, 0);
@@ -383,6 +392,8 @@ void init()
     wheel_distance = 0.0;
     //pos = point(200*cos(cameraAngle), 200*sin(cameraAngle), cameraHeight);
     pos = point(70.0, 70.0, 100.0);
+
+    //color[0][0] = , color[0][1] =, color[0][2] = ;
     //-------------------------------------------
 
     //clear the screen
@@ -428,3 +439,5 @@ int main(int argc, char **argv)
 
     return 0;
 }
+
+// https://community.khronos.org/t/color-tables/22518/6
