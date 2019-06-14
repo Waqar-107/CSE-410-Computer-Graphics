@@ -43,12 +43,16 @@ struct point
 // variables
 point pos;
 point center;
-double theta, wheel_rim_angle, wheel_distance;
-double color_table[8][3];
+double theta, wheel_rim_angle;
 //===============================================
 
 
 //===============================================
+
+float degreeToRadian(float deg) {
+    return (pi * deg) / 180;
+}
+
 void drawSides(double radius, int segments, int d)
 {
      struct point points[100];
@@ -59,8 +63,6 @@ void drawSides(double radius, int segments, int d)
         points[i].x = radius * cos(((double) i / (double) segments) * 2 * pi);
         points[i].z = radius * sin(((double) i / (double) segments) * 2 * pi);
     }
-
-    //glColor3f (0.0, 1.0, 1.0);
 
     double r = 0.3, g = 0.3, b = 0.3;
     for(int i = 0; i < segments; i++)
@@ -92,8 +94,15 @@ void drawWheel()
 
     //-------------------------------------------
     //first rotate then translate -> execution order
-    glTranslated(center.x, center.y, 0);       //move the wheel
-    glRotated(theta, 0, 0, 1);                      //rotate the wheel
+    glTranslated(center.x, center.y, center.z);       //move the wheel
+    glRotated(theta, 0, 0, 1);                                //rotate the wheel
+    //-------------------------------------------
+
+    //-------------------------------------------
+    //rotation of wheel when moving forward or backward
+    glTranslated(0, 0, wheelRadius);
+    glRotated(wheel_rim_angle, 0, 1, 0);
+    glTranslated(0, 0, -wheelRadius);
     //-------------------------------------------
 
     //-------------------------------------------
@@ -126,10 +135,6 @@ void drawWheel()
     glPopMatrix();
 }
 
-float degreeToRadian(float deg) {
-    return (pi * deg) / 180;
-}
-
 void pf(point x){
     cout<<x.x<<" "<<x.y<<" "<<x.z<<endl;
 }
@@ -139,8 +144,7 @@ void move_forward()
     center.x += wheel_fb_dist * cos(degreeToRadian(theta));
     center.y += wheel_fb_dist * sin(degreeToRadian(theta));
 
-    wheel_distance += wheel_fb_dist;
-    wheel_rim_angle = (360 * wheel_distance) / (2 * pi * wheelRadius);
+    wheel_rim_angle += (360 * wheel_fb_dist) / (2 * pi * wheelRadius);
 }
 
 void move_backward()
@@ -148,8 +152,7 @@ void move_backward()
     center.x -= wheel_fb_dist * cos(degreeToRadian(theta));
     center.y -= wheel_fb_dist * sin(degreeToRadian(theta));
 
-    wheel_distance -= wheel_fb_dist;
-    wheel_rim_angle = (360 * wheel_distance) / (2 * pi * wheelRadius);
+    wheel_rim_angle -= (360 * wheel_fb_dist) / (2 * pi * wheelRadius);
 }
 
 void move_right() {
@@ -385,15 +388,12 @@ void init()
     angle = 0;
 
     //-------------------------------------------
-    center = point(0.0, 0.0, wheelRadius);
+    center = point(0.0, 0.0, 0.0);
 
     theta = 0.0;
     wheel_rim_angle = 0.0;
-    wheel_distance = 0.0;
-    //pos = point(200*cos(cameraAngle), 200*sin(cameraAngle), cameraHeight);
-    pos = point(70.0, 70.0, 100.0);
-
-    //color[0][0] = , color[0][1] =, color[0][2] = ;
+    pos = point(200*cos(cameraAngle), 200*sin(cameraAngle), cameraHeight);
+    //pos = point(100,100,100);
     //-------------------------------------------
 
     //clear the screen
