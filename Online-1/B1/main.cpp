@@ -33,7 +33,7 @@ struct point
 //===============================================
 // variables
 point pos;
-double red, blue, green, yellow, cyan, magenta;
+double red, blue, green, yellow, cyan, magenta, temp;
 //===============================================
 
 float degreeToRadian(float deg) {
@@ -143,12 +143,15 @@ void drawCylinder(double radius, double height)
 //===============================================
 void online()
 {
+    //-------------------------------------------
     //red
     glPushMatrix();
     glColor3f (1.0, 0.0, 0.0);
     drawSquare(sqr_side);
     glPopMatrix();
+    //-------------------------------------------
 
+    //-------------------------------------------
     //magenta
     glPushMatrix();
     glColor3f (1.0, 0.0, 1.0);
@@ -160,7 +163,9 @@ void online()
 
     drawSquare(sqr_side);
     glPopMatrix();
+    //-------------------------------------------
 
+    //-------------------------------------------
     //blue
     glPushMatrix();
     glColor3f (0.0, 0.0, 1.0);
@@ -172,19 +177,37 @@ void online()
 
     drawSquare(sqr_side);
     glPopMatrix();
+    //-------------------------------------------
 
+    //-------------------------------------------
     //cyan
     glPushMatrix();
     glColor3f (0.0, 1.0, 1.0);
 
-    glTranslated(sqr_side*3 + sqr_side * cos(degreeToRadian(magenta)), 0, 0);
-    glTranslated(0, 0, sqr_side * sin(degreeToRadian(magenta)));
+    //----------------------------------------------------------------------------
+    //self rotation
+    temp = sqr_side * (1 - cos(degreeToRadian(cyan)));
+    glTranslated(-temp, 0, 0);
+
+    temp = sqr_side * sin(degreeToRadian(cyan));
+    glTranslated(0, 0, temp);
+    //----------------------------------------------------------------------------
+
+    //----------------------------------------------------------------------------
+    //stuck with magenta
+    temp = 3 * sqr_side * (1 - cos(degreeToRadian(magenta)));
+    glTranslated(sqr_side * 4 - temp, 0, 0);
+    glTranslated(0, 0, 3 * sqr_side * sin(degreeToRadian(magenta)));
+    //----------------------------------------------------------------------------
 
     glRotated(-magenta, 0, 1, 0);
+    glRotated(-cyan, 0, 1, 0);
 
     drawSquare(sqr_side);
     glPopMatrix();
+    //-------------------------------------------
 
+    //-------------------------------------------
     //yellow
     glPushMatrix();
     glColor3f (1.0, 1.0, 0.0);
@@ -196,7 +219,9 @@ void online()
 
     drawSquare(sqr_side);
     glPopMatrix();
+    //-------------------------------------------
 
+    //-------------------------------------------
     //green
     glPushMatrix();
     glColor3f (0.0, 1.0, 0.0);
@@ -208,6 +233,7 @@ void online()
 
     drawSquare(sqr_side);
     glPopMatrix();
+    //-------------------------------------------
 }
 //===============================================
 
@@ -239,6 +265,12 @@ void keyboardListener(unsigned char key, int x, int y)
         break;
     case '8':
         magenta = max(0.0, magenta - rotateVal);
+        break;
+    case '9':
+        cyan = min(90.0, cyan + rotateVal);
+        break;
+    case '0':
+        cyan = max(0.0, cyan - rotateVal);
         break;
 
     default:
