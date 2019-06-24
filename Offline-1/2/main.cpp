@@ -191,17 +191,6 @@ void camera_move_down(){
     pos.z -= camUpDownVal;
 }
 //===============================================
-void drawSquare(double a)
-{
-    //glColor3f(1.0,0.0,0.0);
-	glBegin(GL_QUADS);{
-		glVertex3f( a, a,0);
-		glVertex3f( a,-a,0);
-		glVertex3f(-a,-a,0);
-		glVertex3f(-a, a,0);
-	}glEnd();
-}
-
 void drawAxes()
 {
     if (drawaxes == 1)
