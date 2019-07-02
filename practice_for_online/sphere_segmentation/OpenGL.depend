@@ -1,0 +1,21 @@
+# depslib dependency file v1.0
+1560238813 source:c:\programming\cse-410-computer-graphics\offline-1\1\main.cpp
+	<bits/stdc++.h>
+	<windows.h>
+	<glut.h>
+
+1392007564 c:\programming\cse-410-computer-graphics\offline-1\1\opengl\include\glut.h
+	<windows.h>
+	<GL/gl.h>
+	<GL/glu.h>
+
+1560496985 source:c:\programming\cse-410-computer-graphics\template-opengl\main.cpp
+	<bits/stdc++.h>
+	<windows.h>
+	<glut.h>
+
+1392007564 c:\programming\cse-410-computer-graphics\template-opengl\opengl\include\glut.h
+	<windows.h>
+	<GL/gl.h>
+	<GL/glu.h>
+
