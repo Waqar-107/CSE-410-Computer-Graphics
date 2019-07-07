@@ -1,0 +1,281 @@
+/***from dust i have come, dust i will be***/
+
+#include<bits/stdc++.h>
+
+typedef long long int ll;
+typedef unsigned long long int ull;
+
+#define dbg printf("in\n")
+#define nl printf("\n")
+#define pi (2*acos(0.0))
+#define pfs(s) printf("%s",s)
+
+#define pb push_back
+#define pp pair<char, int>
+
+using namespace std;
+
+struct point {
+    double x, y, z, w;
+    point(){
+        w = 1;
+    }
+    point(double x, double y, double z)
+    {
+        this->x = x;
+        this->y = y;
+        this->z = z;
+
+        this->w = 1;
+    }
+
+    void print() {
+        cout << x << " " << y << " " << z << " " << w << endl;
+    }
+};
+
+struct matrix {
+    double mat[4][4];
+    matrix(){
+        resetMatrix();
+    }
+
+    void print()
+    {
+        for(int i = 0; i < 3; i++)
+        {
+            for(int j = 0; j < 3; j++)
+                cout << mat[i][j] << " ";
+
+            nl;
+        }
+    }
+
+    void print_in_file(FILE *f)
+    {
+         for(int i = 0; i < 3; i++)
+        {
+            for(int j = 0; j < 3; j++)
+                fprintf(f, "%f ", mat[i][j]);
+
+            fprintf(f, "\n");
+        }
+
+        fprintf(f, "\n\n");
+    }
+
+    void resetMatrix()
+    {
+        memset(mat, 0, sizeof(mat));
+        for(int i = 0; i < 4; i++)
+            mat[i][i] = 1;
+    }
+};
+//===============================================
+FILE *stage1, *stage2, *stage3;
+point eye, look, up;
+double fovY, aspectRatio, near, far;
+matrix mTop;
+
+stack<matrix> stk;
+//===============================================
+
+
+//===============================================
+void init()
+{
+    stage1 = fopen("stage1.txt", "w");
+    stage2 = fopen("stage2.txt", "w");
+    stage3 = fopen("stage3.txt", "w");
+
+    stk.push(mTop);
+}
+
+//returns a * b
+matrix multiply(matrix a, matrix b)
+{
+    matrix mult;
+a.print();nl;b.print();nl;
+    //4 columns of b
+    for(int c = 0; c < 4; c++)
+    {
+        for(int i = 0; i < 4; i++)
+        {
+            double sum = 0;
+            for(int j = 0; j < 4; j++)
+                sum += a.mat[i][j] * b.mat[j][c];
+
+            mult.mat[i][c] = sum;
+        }
+    }
+mult.print();nl;
+    return mult;
+}
+
+double degreeToRadian(double deg) {
+    return (pi * deg) / 180;
+}
+
+point cross_product(point u, point v) {
+    point temp;
+    temp.x = u.y * v.z - u.z * v.y;
+    temp.y = u.z * v.x - u.x * v.z;
+    temp.z = u.x * v.y - u.y * v.x;
+
+    return temp;
+}
+
+point Rodrigues(point x, point a, double theta)
+{
+    double ca = cos(degreeToRadian(theta));
+    double sa = sin(degreeToRadian(theta));
+
+    double b = (1 - ca) * (x.x * a.x + x.y * a.y + x.z * a.z);
+
+    point A = point(x.x * ca, x.y * ca, x.z * ca);
+    point B = point(a.x * b, a.y * b, a.z * b);
+
+    point C = cross_product(a, x);
+
+    C.x *= sa;
+    C.y *= sa;
+    C.z *= sa;
+
+    return point(A.x + B.x + C.x, A.y + B.y + C.y, A.z + B.z + C.z);
+}
+//===============================================
+
+int main()
+{
+    freopen("scene.txt", "r", stdin);
+
+    int i, j, k;
+    int n, m;
+    double x, y, z, angle, sq;
+
+    point c;
+    matrix temp;
+    string cmd;
+
+    init();
+
+    //gluLookAt
+    cin >> eye.x >> eye.y >> eye.z;
+    cin >> look.x >> look.y >> look.z;
+    cin >> up.x >> up.y >> up.z;
+
+    //gluPerspective
+    cin >> fovY >> aspectRatio >> near >> far;
+
+    while(true)
+    {
+        cin >> cmd;
+cout<<"-----------------------------------\n"<<cmd<<endl;
+        if(cmd == "end")
+            break;
+
+        else if(cmd == "triangle")
+        {
+            temp.resetMatrix();
+
+            cin >> temp.mat[0][0] >> temp.mat[1][0] >> temp.mat[2][0];
+            cin >> temp.mat[0][1] >> temp.mat[1][1] >> temp.mat[2][1];
+            cin >> temp.mat[0][2] >> temp.mat[1][2] >> temp.mat[2][2];
+
+            if(stk.empty())
+                cout << "error during triangle op, stack empty\n";
+
+            else
+                mTop = multiply(stk.top(), temp), stk.push(mTop), mTop.print_in_file(stage1);
+        }
+
+        else if(cmd == "translate")
+        {
+            cin >> x >> y >> z;
+
+            temp.resetMatrix();
+            temp.mat[0][3] = x;
+            temp.mat[1][3] = y;
+            temp.mat[2][3] = z;
+
+            if(stk.empty())
+                cout << "error during translation, stack empty\n";
+
+            else
+                mTop = multiply(stk.top(), temp), stk.push(mTop);
+        }
+
+        else if(cmd == "scale")
+        {
+            cin >> x >> y >> z;
+
+            temp.resetMatrix();
+            temp.mat[0][0] = x;
+            temp.mat[1][1] = y;
+            temp.mat[2][2] = z;
+
+            if(stk.empty())
+                cout << "error during translation, stack empty\n";
+
+            else
+                mTop = multiply(stk.top(), temp), stk.push(mTop);
+
+            /*cout<<"in scale\n";
+            mTop.print();*/
+        }
+
+        else if(cmd == "rotate")
+        {
+            cin >> angle >> x >> y >> z;
+
+            sq = sqrt(x * x + y * y + z * z);
+
+            x /= sq;
+            y /= sq;
+            z /= sq;
+
+            temp.resetMatrix();
+
+            c = Rodrigues(point(1, 0, 0), point(x, y, z), angle);
+            temp.mat[0][0] = c.x;
+            temp.mat[1][0] = c.y;
+            temp.mat[2][0] = c.z;
+
+            c = Rodrigues(point(0, 1, 0), point(x, y, z), angle);
+            temp.mat[0][1] = c.x;
+            temp.mat[1][1] = c.y;
+            temp.mat[2][1] = c.z;
+
+            c = Rodrigues(point(0, 0, 1), point(x, y, z), angle);
+            temp.mat[0][2] = c.x;
+            temp.mat[1][2] = c.y;
+            temp.mat[2][2] = c.z;
+
+            if(stk.empty())
+                cout << "error during rotation, stack empty\n";
+
+            else
+                mTop = multiply(stk.top(), temp), stk.push(mTop);
+        }
+
+        else if(cmd == "push")
+            stk.push(mTop);
+
+        else if(cmd == "pop")
+        {
+            if(!stk.empty())
+                stk.pop();
+            else
+                cout << "stack is empty, unable to pop\n";
+
+            if(!stk.empty())
+                mTop = stk.top();
+            else
+                cout << "stack is empty, unable to retrieve top\n";
+        }
+
+cout<<"-----------------------------------\n";
+    }
+
+    return 0;
+}
