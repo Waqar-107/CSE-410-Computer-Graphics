@@ -42,9 +42,9 @@ struct matrix {
 
     void print()
     {
-        for(int i = 0; i < 3; i++)
+        for(int i = 0; i < 4; i++)
         {
-            for(int j = 0; j < 3; j++)
+            for(int j = 0; j < 4; j++)
                 cout << mat[i][j] << " ";
 
             nl;
@@ -56,12 +56,12 @@ struct matrix {
          for(int i = 0; i < 3; i++)
         {
             for(int j = 0; j < 3; j++)
-                fprintf(f, "%f ", mat[i][j]);
+                fprintf(f, "%.7f ", mat[j][i]);
 
             fprintf(f, "\n");
         }
 
-        fprintf(f, "\n\n");
+        fprintf(f, "\n");
     }
 
     void resetMatrix()
@@ -95,7 +95,7 @@ void init()
 matrix multiply(matrix a, matrix b)
 {
     matrix mult;
-a.print();nl;b.print();nl;
+
     //4 columns of b
     for(int c = 0; c < 4; c++)
     {
@@ -108,7 +108,7 @@ a.print();nl;b.print();nl;
             mult.mat[i][c] = sum;
         }
     }
-mult.print();nl;
+
     return mult;
 }
 
@@ -170,7 +170,7 @@ int main()
     while(true)
     {
         cin >> cmd;
-cout<<"-----------------------------------\n"<<cmd<<endl;
+
         if(cmd == "end")
             break;
 
@@ -182,11 +182,14 @@ cout<<"-----------------------------------\n"<<cmd<<endl;
             cin >> temp.mat[0][1] >> temp.mat[1][1] >> temp.mat[2][1];
             cin >> temp.mat[0][2] >> temp.mat[1][2] >> temp.mat[2][2];
 
+            temp.mat[0][3] = temp.mat[1][3] = temp.mat[2][3] = 1;
+            temp.mat[3][0] = temp.mat[3][1] = temp.mat[3][2] = 1;
+
             if(stk.empty())
                 cout << "error during triangle op, stack empty\n";
 
             else
-                mTop = multiply(stk.top(), temp), stk.push(mTop), mTop.print_in_file(stage1);
+                temp = multiply(stk.top(), temp), temp.print_in_file(stage1);
         }
 
         else if(cmd == "translate")
@@ -202,7 +205,7 @@ cout<<"-----------------------------------\n"<<cmd<<endl;
                 cout << "error during translation, stack empty\n";
 
             else
-                mTop = multiply(stk.top(), temp), stk.push(mTop);
+                mTop = multiply(stk.top(), temp), stk.pop(), stk.push(mTop);
         }
 
         else if(cmd == "scale")
@@ -215,13 +218,10 @@ cout<<"-----------------------------------\n"<<cmd<<endl;
             temp.mat[2][2] = z;
 
             if(stk.empty())
-                cout << "error during translation, stack empty\n";
+                cout << "error during scaling, stack empty\n";
 
             else
-                mTop = multiply(stk.top(), temp), stk.push(mTop);
-
-            /*cout<<"in scale\n";
-            mTop.print();*/
+                mTop = multiply(stk.top(), temp), stk.pop(), stk.push(mTop);
         }
 
         else if(cmd == "rotate")
@@ -255,7 +255,7 @@ cout<<"-----------------------------------\n"<<cmd<<endl;
                 cout << "error during rotation, stack empty\n";
 
             else
-                mTop = multiply(stk.top(), temp), stk.push(mTop);
+                mTop = multiply(stk.top(), temp), stk.pop(), stk.push(mTop);
         }
 
         else if(cmd == "push")
@@ -273,8 +273,6 @@ cout<<"-----------------------------------\n"<<cmd<<endl;
             else
                 cout << "stack is empty, unable to retrieve top\n";
         }
-
-cout<<"-----------------------------------\n";
     }
 
     return 0;
