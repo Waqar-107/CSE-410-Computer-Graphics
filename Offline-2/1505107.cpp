@@ -56,7 +56,11 @@ struct matrix {
          for(int i = 0; i < 3; i++)
         {
             for(int j = 0; j < 3; j++)
-                fprintf(f, "%.7f ", mat[j][i]);
+            {
+                fprintf(f, "%.7f", mat[j][i]);
+                if(j < 2)
+                    fprintf(f, " ");
+            }
 
             fprintf(f, "\n");
         }
@@ -71,26 +75,18 @@ struct matrix {
             mat[i][i] = 1;
     }
 };
+
 //===============================================
 FILE *stage1, *stage2, *stage3;
 point eye, look, up;
 double fovY, aspectRatio, near, far;
-matrix mTop;
+matrix mTop, V;
 
 stack<matrix> stk;
 //===============================================
 
 
 //===============================================
-void init()
-{
-    stage1 = fopen("stage1.txt", "w");
-    stage2 = fopen("stage2.txt", "w");
-    stage3 = fopen("stage3.txt", "w");
-
-    stk.push(mTop);
-}
-
 //returns a * b
 matrix multiply(matrix a, matrix b)
 {
@@ -116,6 +112,17 @@ double degreeToRadian(double deg) {
     return (pi * deg) / 180;
 }
 
+point normalized(point p)
+{
+    double sq = sqrt(p.x * p.x + p.y * p.y + p.z * p.z);
+
+    p.x /= sq;
+    p.y /= sq;
+    p.z /= sq;
+
+    return p;
+}
+
 point cross_product(point u, point v) {
     point temp;
     temp.x = u.y * v.z - u.z * v.y;
@@ -123,6 +130,44 @@ point cross_product(point u, point v) {
     temp.z = u.x * v.y - u.y * v.x;
 
     return temp;
+}
+
+void init()
+{
+    stage1 = fopen("stage1.txt", "w");
+    stage2 = fopen("stage2.txt", "w");
+    stage3 = fopen("stage3.txt", "w");
+
+    stk.push(mTop);
+
+    //for view transformation
+    point l = point(look.x - eye.x, look.y - eye.y, look.z - eye.z);
+    l = normalized(l);
+
+    point r = cross_product(l, up);
+    r = normalized(r);
+
+    point u = cross_product(r, l);
+
+    matrix T;
+    T.mat[0][3] = -eye.x;
+    T.mat[1][3] = -eye.y;
+    T.mat[2][3] = -eye.z;
+
+    matrix R;
+    R.mat[0][0] = r.x;
+    R.mat[0][1] = r.y;
+    R.mat[0][2] = r.z;
+
+    R.mat[1][0] = u.x;
+    R.mat[1][1] = u.y;
+    R.mat[1][2] = u.z;
+
+    R.mat[2][0] = -l.x;
+    R.mat[2][1] = -l.y;
+    R.mat[2][2] = -l.z;
+
+    V = multiply(R, T);
 }
 
 point Rodrigues(point x, point a, double theta)
@@ -143,6 +188,14 @@ point Rodrigues(point x, point a, double theta)
 
     return point(A.x + B.x + C.x, A.y + B.y + C.y, A.z + B.z + C.z);
 }
+
+
+void viewTransformation(matrix curr)
+{
+
+    matrix temp = multiply(V, curr);
+    temp.print_in_file(stage2);
+}
 //===============================================
 
 int main()
@@ -157,8 +210,6 @@ int main()
     matrix temp;
     string cmd;
 
-    init();
-
     //gluLookAt
     cin >> eye.x >> eye.y >> eye.z;
     cin >> look.x >> look.y >> look.z;
@@ -166,6 +217,8 @@ int main()
 
     //gluPerspective
     cin >> fovY >> aspectRatio >> near >> far;
+
+    init();
 
     while(true)
     {
@@ -190,6 +243,9 @@ int main()
 
             else
                 temp = multiply(stk.top(), temp), temp.print_in_file(stage1);
+
+            //view
+            viewTransformation(temp);
         }
 
         else if(cmd == "translate")
