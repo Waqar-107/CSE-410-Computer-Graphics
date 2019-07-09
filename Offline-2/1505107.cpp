@@ -42,10 +42,10 @@ struct matrix {
 
     void print()
     {
-        for(int i = 0; i < 4; i++)
+        for(int i = 0; i < 3; i++)
         {
-            for(int j = 0; j < 4; j++)
-                cout << mat[i][j] << " ";
+            for(int j = 0; j < 3; j++)
+                cout << mat[j][i] << " ";
 
             nl;
         }
@@ -80,7 +80,7 @@ struct matrix {
 FILE *stage1, *stage2, *stage3;
 point eye, look, up;
 double fovY, aspectRatio, near, far;
-matrix mTop, V;
+matrix mTop, V, P;
 
 stack<matrix> stk;
 //===============================================
@@ -168,6 +168,20 @@ void init()
     R.mat[2][2] = -l.z;
 
     V = multiply(R, T);
+
+    //projection
+    double fovX = fovY * aspectRatio;
+
+    double t = near * tan(degreeToRadian(fovY / 2));
+    double r2 = near * tan(degreeToRadian(fovX / 2));
+
+    P.mat[0][0] = near / r2;
+    P.mat[1][1] = near / t;
+    P.mat[2][2] = -(far + near) / (far - near);
+    P.mat[3][3] = 0;
+
+    P.mat[3][2] = -1;
+    P.mat[2][3] = -(2 * far * near) / (far - near);
 }
 
 point Rodrigues(point x, point a, double theta)
@@ -190,11 +204,21 @@ point Rodrigues(point x, point a, double theta)
 }
 
 
-void viewTransformation(matrix curr)
+matrix viewTransformation(matrix curr)
 {
-
     matrix temp = multiply(V, curr);
     temp.print_in_file(stage2);
+
+    return temp;
+}
+
+void projectionTransformation(matrix curr)
+{
+    curr.print();
+    P.print();
+    nl;
+    matrix temp = multiply(P, curr);
+    temp.print_in_file(stage3);
 }
 //===============================================
 
@@ -207,7 +231,7 @@ int main()
     double x, y, z, angle, sq;
 
     point c;
-    matrix temp;
+    matrix temp, temp2, temp3;
     string cmd;
 
     //gluLookAt
@@ -245,7 +269,12 @@ int main()
                 temp = multiply(stk.top(), temp), temp.print_in_file(stage1);
 
             //view
-            viewTransformation(temp);
+            temp2 = multiply(V, temp);
+            temp2.print_in_file(stage2);
+
+            //projection
+            temp3 = multiply(P, temp2);
+            temp3.print_in_file(stage3);
         }
 
         else if(cmd == "translate")
