@@ -7,7 +7,7 @@ typedef unsigned long long int ull;
 
 #define dbg printf("in\n")
 #define nl printf("\n")
-#define pi (2*acos(0.0))
+#define pi acos(-1.0)
 #define pfs(s) printf("%s",s)
 
 #define pb push_back
@@ -42,10 +42,10 @@ struct matrix {
 
     void print()
     {
-        for(int i = 0; i < 3; i++)
+        for(int i = 0; i < 4; i++)
         {
-            for(int j = 0; j < 3; j++)
-                cout << mat[j][i] << " ";
+            for(int j = 0; j < 4; j++)
+                cout << fixed << setprecision(7) << mat[i][j] << " ";
 
             nl;
         }
@@ -121,6 +121,17 @@ point normalized(point p)
     p.z /= sq;
 
     return p;
+}
+
+matrix scaleW(matrix m)
+{
+    for(int i = 0; i < 4; i++)
+    {
+        for(int j  = 0; j < 4; j++)
+            m.mat[i][j] /= m.mat[3][i];
+    }
+
+    return m;
 }
 
 point cross_product(point u, point v) {
@@ -202,24 +213,6 @@ point Rodrigues(point x, point a, double theta)
 
     return point(A.x + B.x + C.x, A.y + B.y + C.y, A.z + B.z + C.z);
 }
-
-
-matrix viewTransformation(matrix curr)
-{
-    matrix temp = multiply(V, curr);
-    temp.print_in_file(stage2);
-
-    return temp;
-}
-
-void projectionTransformation(matrix curr)
-{
-    curr.print();
-    P.print();
-    nl;
-    matrix temp = multiply(P, curr);
-    temp.print_in_file(stage3);
-}
 //===============================================
 
 int main()
@@ -274,7 +267,23 @@ int main()
 
             //projection
             temp3 = multiply(P, temp2);
-            temp3.print_in_file(stage3);
+
+            //normalize
+            //temp3 = scaleW(temp3);
+            //temp3.print_in_file(stage3);
+            for(int i = 0; i < 3; i++)
+            {
+                for(int j = 0; j < 3; j++)
+                {
+                    fprintf(stage3, "%.7f", temp3.mat[j][i] / temp3.mat[3][i]);
+                    if(j < 2)
+                        fprintf(stage3, " ");
+                }
+
+                fprintf(stage3, "\n");
+            }
+
+            fprintf(stage3, "\n");
         }
 
         else if(cmd == "translate")
