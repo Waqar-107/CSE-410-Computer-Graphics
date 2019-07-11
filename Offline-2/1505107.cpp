@@ -2,16 +2,12 @@
 
 #include<bits/stdc++.h>
 
-typedef long long int ll;
-typedef unsigned long long int ull;
-
 #define dbg printf("in\n")
 #define nl printf("\n")
-#define pi acos(-1.0)
 #define pfs(s) printf("%s",s)
 
-#define pb push_back
-#define pp pair<char, int>
+#define pi acos(-1.0)
+#define pp pair<matrix, bool>
 
 using namespace std;
 
@@ -82,7 +78,7 @@ point eye, look, up;
 double fovY, aspectRatio, near, far;
 matrix mTop, V, P;
 
-stack<matrix> stk;
+stack<pp> stk;
 //===============================================
 
 
@@ -149,7 +145,7 @@ void init()
     stage2 = fopen("stage2.txt", "w");
     stage3 = fopen("stage3.txt", "w");
 
-    stk.push(mTop);
+    stk.push({mTop, false});
 
     //for view transformation
     point l = point(look.x - eye.x, look.y - eye.y, look.z - eye.z);
@@ -259,7 +255,7 @@ int main()
                 cout << "error during triangle op, stack empty\n";
 
             else
-                temp = multiply(stk.top(), temp), temp.print_in_file(stage1);
+                temp = multiply(stk.top().first, temp), temp.print_in_file(stage1);
 
             //view
             temp2 = multiply(V, temp);
@@ -269,8 +265,6 @@ int main()
             temp3 = multiply(P, temp2);
 
             //normalize
-            //temp3 = scaleW(temp3);
-            //temp3.print_in_file(stage3);
             for(int i = 0; i < 3; i++)
             {
                 for(int j = 0; j < 3; j++)
@@ -299,7 +293,7 @@ int main()
                 cout << "error during translation, stack empty\n";
 
             else
-                mTop = multiply(stk.top(), temp), stk.pop(), stk.push(mTop);
+                mTop = multiply(stk.top().first, temp), stk.push({mTop, false});
         }
 
         else if(cmd == "scale")
@@ -315,7 +309,7 @@ int main()
                 cout << "error during scaling, stack empty\n";
 
             else
-                mTop = multiply(stk.top(), temp), stk.pop(), stk.push(mTop);
+                mTop = multiply(stk.top().first, temp), stk.push({mTop, false});
         }
 
         else if(cmd == "rotate")
@@ -349,25 +343,29 @@ int main()
                 cout << "error during rotation, stack empty\n";
 
             else
-                mTop = multiply(stk.top(), temp), stk.pop(), stk.push(mTop);
+                mTop = multiply(stk.top().first, temp), stk.push({mTop, false});
         }
 
         else if(cmd == "push")
-            stk.push(mTop);
+            stk.push({stk.top().first, true});
 
         else if(cmd == "pop")
         {
+            while(!stk.empty() && !stk.top().second)
+                stk.pop();
+
             if(!stk.empty())
                 stk.pop();
             else
-                cout << "stack is empty, unable to pop\n";
-
-            if(!stk.empty())
-                mTop = stk.top();
-            else
-                cout << "stack is empty, unable to retrieve top\n";
+                cout<<"unable to pop\n";
         }
+
+        //cout<<cmd<<" "<<stk.size()<<endl;
     }
+
+    fclose(stage1);
+    fclose(stage2);
+    fclose(stage3);
 
     return 0;
 }
