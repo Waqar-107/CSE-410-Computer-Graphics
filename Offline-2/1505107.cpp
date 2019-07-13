@@ -53,7 +53,7 @@ struct matrix {
         {
             for(int j = 0; j < 3; j++)
             {
-                fprintf(f, "%.7f", mat[j][i]);
+                fprintf(f, "%.7f", mat[j][i] / mat[3][i]);
                 if(j < 2)
                     fprintf(f, " ");
             }
@@ -263,21 +263,7 @@ int main()
 
             //projection
             temp3 = multiply(P, temp2);
-
-            //normalize
-            for(int i = 0; i < 3; i++)
-            {
-                for(int j = 0; j < 3; j++)
-                {
-                    fprintf(stage3, "%.7f", temp3.mat[j][i] / temp3.mat[3][i]);
-                    if(j < 2)
-                        fprintf(stage3, " ");
-                }
-
-                fprintf(stage3, "\n");
-            }
-
-            fprintf(stage3, "\n");
+            temp3.print_in_file(stage3);
         }
 
         else if(cmd == "translate")
