@@ -324,7 +324,9 @@ int main()
             temp.mat[0][2] = c.x;
             temp.mat[1][2] = c.y;
             temp.mat[2][2] = c.z;
-
+cout<<"rotate "<<angle<<" "<<x<<" "<<y<<" "<<z;nl;
+temp.print();nl;
+stk.top().first.print();nl;nl;
             if(stk.empty())
                 cout << "error during rotation, stack empty\n";
 

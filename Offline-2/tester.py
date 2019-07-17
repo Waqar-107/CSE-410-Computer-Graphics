@@ -34,7 +34,7 @@ if os.system("g++ -std=c++11 1505107.cpp") == 0:
 else:
     print("code compilation error")
 
-for i in range(3):
+for i in range(4):
     build_input_file(os.getcwd() + "/Assignment 2/test cases/" + str(i + 1) + "/scene.txt")
 
     if os.system("./a.out") == 0:
