@@ -10,9 +10,6 @@
 #define anticlkwise -1
 
 #define nl printf("\n")
-#define sqr_side_mx 30.0
-#define sphere_r_mx 30.0
-#define threshold 1.0
 
 using namespace std;
 
@@ -213,6 +210,44 @@ void drawSphere(double radius, int slices, int stacks)
 //===============================================
 void drawCheckerBoard()
 {
+    /*
+    (-1000, 1000)  --------  (1000, 1000)
+    |                                                       |
+    |                                                       |
+    |                                                       |
+    (-1000, -1000) -------- (1000, -1000)
+    */
+
+    int X = -1000, Y = 1000;
+    int th = 20;
+
+    bool white = true, white_in;
+    for(int r = Y; r >= -Y + th; r -= th)
+    {
+        white_in = white;
+        for(int c = X; c <= -X + th; c += th)
+        {
+            if(white_in)
+                glColor3f(1.0, 1.0, 1.0);
+            else
+                glColor3f(0.0, 0.0, 0.0);
+
+            white_in = !white_in;
+
+            //left corner of the cell is r,c
+
+            glBegin(GL_QUADS);
+            {
+                glVertex3f(r, c, 0);
+                glVertex3f(r + th, c, 0);
+                glVertex3f(r + th, c - th, 0);
+                glVertex3f(r, c - th, 0);
+            }
+            glEnd();
+        }
+
+        white = !white;
+    }
 
 }
 //===============================================
@@ -277,13 +312,9 @@ void specialKeyListener(int key, int x, int y)
         break;
 
     case GLUT_KEY_HOME:
-        sqr_side = max(0.0, sqr_side - threshold);
-        sphere_r = min(sphere_r_mx, sphere_r + threshold);
         break;
 
     case GLUT_KEY_END:
-        sqr_side = min(sqr_side_mx, sqr_side + threshold);
-        sphere_r = max(0.0, sphere_r - threshold);
         break;
 
     default:
@@ -342,7 +373,7 @@ void display()
     / Add your objects from here
     ****************************/
     drawAxes();
-
+    drawCheckerBoard();
 
     //ADD this line in the end --- if you use double buffer (i.e. GL_DOUBLE)
     glutSwapBuffers();
@@ -388,6 +419,8 @@ void init()
 
 int main(int argc, char **argv)
 {
+    freopen("description.txt", "r", stdin);
+
     glutInit(&argc, argv);
     glutInitWindowSize(500, 500);
     glutInitWindowPosition(0, 0);
