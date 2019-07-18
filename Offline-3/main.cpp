@@ -278,7 +278,7 @@ drawPyramid(shape p)
     //we shall draw a square as the base then 4 triangles
     glBegin(GL_QUADS);
     {
-        p.z += 0.01;
+        //p.z += 0.01;
         glVertex3f(p.x, p.y, p.z);    //leftmost corner
         glVertex3f(p.x + p.base, p.y, p.z);
         glVertex3f(p.x + p.base, p.y + p.base, p.z);
@@ -569,7 +569,7 @@ int main(int argc, char **argv)
     glutInitWindowPosition(0, 0);
     glutInitDisplayMode(GLUT_DEPTH | GLUT_DOUBLE | GLUT_RGB);    //Depth, Double buffer, RGB color
 
-    glutCreateWindow("qube to sphere");
+    glutCreateWindow("Ray-Tracing");
 
     init();
 
