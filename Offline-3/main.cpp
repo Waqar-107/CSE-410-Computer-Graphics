@@ -31,10 +31,30 @@ struct point
     }
 };
 
+class shape
+{
+public:
+    string name;
+    double r, g, b;
+    double ambient_coeff, diffuse_coeff, specular_coeff, reflection_coeff;
+    double specular_exponent;
+
+    double cx, cy, cz;
+    double radius;
+
+    double x, y, z;
+    double base, height;
+
+    shape(string name){
+        this->name = name;
+    }
+};
 //===============================================
 // variables
 point pos, U, R, L;
-double sqr_side = 30.0, sphere_r = 0.0;
+
+int level_of_recursion, pixels, n_objs;
+vector<shape> vec;
 //===============================================
 
 
@@ -170,41 +190,43 @@ void drawSquare(double a)
     glEnd();
 }
 
-void drawSphere(double radius, int slices, int stacks)
+void drawSphere(double radius,int slices,int stacks)
 {
-    struct point points[100][100];
-    int i, j;
-    double h, r;
+	struct point points[100][100];
+	int i,j;
+	double h,r;
 
-    //generate points
-    for (i = 0; i <= stacks; i++)
-    {
-        h = radius * sin(((double) i / (double) stacks) * (pi / 2));
-        r = radius * cos(((double) i / (double) stacks) * (pi / 2));
-        for (j = 0; j <= slices; j++)
-        {
-            points[i][j].x = r * cos(((double) j / (double) slices) * (pi / 2));
-            points[i][j].y = r * sin(((double) j / (double) slices) * (pi / 2));
-            points[i][j].z = h;
-        }
-    }
-
-    //draw quads using generated points
-    for (i = 0; i < stacks; i++)
-    {
-        for (j = 0; j < slices; j++)
-        {
-            glBegin(GL_QUADS);
-            {
-                //upper hemisphere
-                glVertex3f(points[i][j].x, points[i][j].y, points[i][j].z);
-                glVertex3f(points[i][j + 1].x, points[i][j + 1].y, points[i][j + 1].z);
-                glVertex3f(points[i + 1][j + 1].x, points[i + 1][j + 1].y, points[i + 1][j + 1].z);
-                glVertex3f(points[i + 1][j].x, points[i + 1][j].y, points[i + 1][j].z);
-            }
-            glEnd();
-        }
-    }
+	//generate points
+	for(i=0;i<=stacks;i++)
+	{
+		h=radius*sin(((double)i/(double)stacks)*(pi/2));
+		r=radius*cos(((double)i/(double)stacks)*(pi/2));
+		for(j=0;j<=slices;j++)
+		{
+			points[i][j].x=r*cos(((double)j/(double)slices)*2*pi);
+			points[i][j].y=r*sin(((double)j/(double)slices)*2*pi);
+			points[i][j].z=h;
+		}
+	}
+	//draw quads using generated points
+	for(i=0;i<stacks;i++)
+	{
+		for(j=0;j<slices;j++)
+		{
+			glBegin(GL_QUADS);{
+			    //upper hemisphere
+				glVertex3f(points[i][j].x,points[i][j].y,points[i][j].z);
+				glVertex3f(points[i][j+1].x,points[i][j+1].y,points[i][j+1].z);
+				glVertex3f(points[i+1][j+1].x,points[i+1][j+1].y,points[i+1][j+1].z);
+				glVertex3f(points[i+1][j].x,points[i+1][j].y,points[i+1][j].z);
+                //lower hemisphere
+                glVertex3f(points[i][j].x,points[i][j].y,-points[i][j].z);
+				glVertex3f(points[i][j+1].x,points[i][j+1].y,-points[i][j+1].z);
+				glVertex3f(points[i+1][j+1].x,points[i+1][j+1].y,-points[i+1][j+1].z);
+				glVertex3f(points[i+1][j].x,points[i+1][j].y,-points[i+1][j].z);
+			}glEnd();
+		}
+	}
 }
 
 //===============================================
@@ -250,6 +272,85 @@ void drawCheckerBoard()
     }
 
 }
+
+drawPyramid(shape p)
+{
+    //we shall draw a square as the base then 4 triangles
+    glBegin(GL_QUADS);
+    {
+        p.z += 0.01;
+        glVertex3f(p.x, p.y, p.z);    //leftmost corner
+        glVertex3f(p.x + p.base, p.y, p.z);
+        glVertex3f(p.x + p.base, p.y + p.base, p.z);
+        glVertex3f(p.x, p.y + p.base, p.z);
+    }
+    glEnd();
+
+    point top(p.x + p.base / 2, p.y + p.base / 2, p.z + p.height);
+
+    //1st triangle
+    glBegin(GL_TRIANGLES);
+    {
+        glVertex3f(p.x, p.y, p.z);    //leftmost corner
+        glVertex3f(p.x + p.base, p.y, p.z);
+        glVertex3f(top.x, top.y, top.z);
+    }
+    glEnd();
+
+    //2nd triangle
+    glBegin(GL_TRIANGLES);
+    {
+        glVertex3f(p.x, p.y, p.z);    //leftmost corner
+        glVertex3f(p.x, p.y + p.base, p.z);
+        glVertex3f(top.x, top.y, top.z);
+    }
+    glEnd();
+
+    //3rd triangle
+    glBegin(GL_TRIANGLES);
+    {
+        glVertex3f(p.x + p.base, p.y, p.z);
+        glVertex3f(p.x + p.base, p.y + p.base, p.z);
+        glVertex3f(top.x, top.y, top.z);
+    }
+    glEnd();
+
+    //4th triangle
+    glBegin(GL_TRIANGLES);
+    {
+        glVertex3f(p.x + p.base, p.y + p.base, p.z);
+        glVertex3f(p.x, p.y + p.base, p.z);
+        glVertex3f(top.x, top.y, top.z);
+    }
+    glEnd();
+}
+
+void drawShapes()
+{
+    for(int i = 0; i < vec.size(); i++)
+    {
+        if(vec[i].name == "sphere")
+        {
+            glPushMatrix();
+            {
+                glTranslated(vec[i].cx, vec[i].cy, vec[i].cz);
+                glColor3f(vec[i].r, vec[i].g, vec[i].b);
+                drawSphere(vec[i].radius, 50, 50);
+            }
+            glPopMatrix();
+        }
+
+        else if(vec[i].name == "pyramid")
+        {
+            glPushMatrix();
+            {
+                glColor3f(vec[i].r, vec[i].g, vec[i].b);
+                drawPyramid(vec[i]);
+            }
+            glPopMatrix();
+        }
+    }
+}
 //===============================================
 
 void keyboardListener(unsigned char key, int x, int y)
@@ -257,10 +358,10 @@ void keyboardListener(unsigned char key, int x, int y)
     switch (key)
     {
     case '1':
-        look_left();
+        look_right();
         break;
     case '2':
-        look_right();
+        look_left();
         break;
     case '3':
         look_up();
@@ -269,10 +370,10 @@ void keyboardListener(unsigned char key, int x, int y)
         look_down();
         break;
     case '5':
-        tilt_clockwise();
+        tilt_counter_clockwise();
         break;
     case '6':
-        tilt_counter_clockwise();
+        tilt_clockwise();
         break;
 
     default:
@@ -374,6 +475,7 @@ void display()
     ****************************/
     drawAxes();
     drawCheckerBoard();
+    drawShapes();
 
     //ADD this line in the end --- if you use double buffer (i.e. GL_DOUBLE)
     glutSwapBuffers();
@@ -382,7 +484,6 @@ void display()
 void animate()
 {
     angle += 0.05;
-    //codes for any changes in Models, Camera
     glutPostRedisplay();
 }
 
@@ -417,9 +518,51 @@ void init()
     U = point(0, 0, 1), R = point(-1/sqrt(2.0),  1/sqrt(2.0), 0), L = point(-1/sqrt(2.0),  -1/sqrt(2.0), 0);
 }
 
+void parseData()
+{
+    cin >> level_of_recursion;
+    cin >> pixels;
+    cin >> n_objs;
+
+    string str;
+    for(int i = 0; i < n_objs; i++)
+    {
+        cin >> str;
+
+        if(str == "sphere")
+        {
+            shape x("sphere");
+
+            cin >> x.cx >> x.cy >> x.cz;
+            cin >> x.radius;
+            cin >> x.r >> x.g >> x.b;
+            cin >> x.ambient_coeff >> x.diffuse_coeff >> x.specular_coeff >> x.reflection_coeff;
+            cin >> x.specular_exponent;
+
+            vec.push_back(x);
+        }
+
+        else if(str == "pyramid")
+        {
+            shape x("pyramid");
+
+            cin >> x.x >> x.y >> x.z;
+            cin >> x.base >> x.height;
+            cin >> x.r >> x.g >> x.b;
+            cin >> x.ambient_coeff >> x.diffuse_coeff >> x.specular_coeff >> x.reflection_coeff;
+            cin >> x.specular_exponent;
+
+            vec.push_back(x);
+        }
+
+        else
+            break;
+    }
+}
 int main(int argc, char **argv)
 {
     freopen("description.txt", "r", stdin);
+    parseData();
 
     glutInit(&argc, argv);
     glutInitWindowSize(500, 500);
@@ -443,7 +586,3 @@ int main(int argc, char **argv)
 
     return 0;
 }
-
-/*
-https://stackoverflow.com/questions/19170778/glrotateangle-x-y-z-what-is-x-y-z-in-this-case
-*/
