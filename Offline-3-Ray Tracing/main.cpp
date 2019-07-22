@@ -3,6 +3,7 @@
 #include<bits/stdc++.h>
 #include <windows.h>
 #include <glut.h>
+#include "bitmap_image.hpp"
 
 #define pi (2*acos(0.0))
 #define rotateVal 3
@@ -15,8 +16,7 @@ using namespace std;
 
 double cameraHeight;
 double cameraAngle;
-int drawgrid;
-int drawaxes;
+int drawgrid, drawaxes, display_light_source;
 double angle;
 
 struct point
@@ -31,11 +31,23 @@ struct point
     }
 };
 
+struct Color
+{
+        double r, g, b;
+        Color(){}
+        Color(double r, double g, double b)
+        {
+            this->r = r;
+            this->g =g;
+            this->b = b;
+        }
+};
+
 class shape
 {
 public:
     string name;
-    double r, g, b;
+    Color color;
     double ambient_coeff, diffuse_coeff, specular_coeff, reflection_coeff;
     double specular_exponent;
 
@@ -49,12 +61,26 @@ public:
         this->name = name;
     }
 };
+
+struct Ray
+{
+    point start, dir;
+    Ray()
+    {
+        start = point(0, 0, 0);
+        dir = point(0, 0, 0);
+    }
+};
+
 //===============================================
 // variables
 point pos, U, R, L;
-
+int light_src_quantity;
 int level_of_recursion, pixels, n_objs;
+int window_height, window_width;
+double fovY;
 vector<shape> vec;
+vector<point> light_sources;
 //===============================================
 
 
@@ -69,6 +95,17 @@ point add(point u, point v) {
 
 point subtract(point u, point v) {
     return point(u.x - v.x, u.y - v.y, u.z - v.z);
+}
+
+point multiplyWithScaler(point p, double sc)
+{
+    point temp;
+
+    temp.x = p.x * sc;
+    temp.y = p.y * sc;
+    temp.z = p.z * sc;
+
+    return temp;
 }
 
 point cross_product(point u, point v) {
@@ -176,18 +213,6 @@ void drawAxes()
         }
         glEnd();
     }
-}
-
-void drawSquare(double a)
-{
-    glBegin(GL_QUADS);
-    {
-        glVertex3f(a, a, 0);
-        glVertex3f(a, -a, 0);
-        glVertex3f(-a, -a, 0);
-        glVertex3f(-a, a, 0);
-    }
-    glEnd();
 }
 
 void drawSphere(double radius,int slices,int stacks)
@@ -325,6 +350,20 @@ drawPyramid(shape p)
     glEnd();
 }
 
+void drawLightSources()
+{
+    if(!display_light_source)return;
+
+    glColor3f(1, 1, 1);
+    for(int i = 0; i < light_sources.size(); i++)
+    {
+        glPushMatrix();
+            glTranslated(light_sources[i].x, light_sources[i].y, light_sources[i].z);
+            drawSphere(1, 90, 90);
+        glPopMatrix();
+    }
+}
+
 void drawShapes()
 {
     for(int i = 0; i < vec.size(); i++)
@@ -334,8 +373,8 @@ void drawShapes()
             glPushMatrix();
             {
                 glTranslated(vec[i].cx, vec[i].cy, vec[i].cz);
-                glColor3f(vec[i].r, vec[i].g, vec[i].b);
-                drawSphere(vec[i].radius, 50, 50);
+                glColor3f(vec[i].color.r, vec[i].color.g, vec[i].color.b);
+                drawSphere(vec[i].radius, 90, 90);
             }
             glPopMatrix();
         }
@@ -344,12 +383,27 @@ void drawShapes()
         {
             glPushMatrix();
             {
-                glColor3f(vec[i].r, vec[i].g, vec[i].b);
+                glColor3f(vec[i].color.r, vec[i].color.g, vec[i].color.b);
                 drawPyramid(vec[i]);
             }
             glPopMatrix();
         }
     }
+}
+
+void capture()
+{
+    bitmap_image image(pixels, pixels);
+
+    double plane_dist = (window_height / 2) * tan(degreeToRadian(fovY / 2));
+    point topLeft, l, r, u;
+
+    l = multiplyWithScaler(L, plane_dist);
+    r = multiplyWithScaler(R, window_width / 2);
+    u = multiplyWithScaler(U, window_height / 2);
+
+    topLeft = subtract(add(pos, u), add(l, r));
+
 }
 //===============================================
 
@@ -374,6 +428,9 @@ void keyboardListener(unsigned char key, int x, int y)
         break;
     case '6':
         tilt_clockwise();
+        break;
+    case '0':
+        capture();
         break;
 
     default:
@@ -431,6 +488,7 @@ void mouseListener(int button, int state, int x, int y)      //x, y is the x-y o
         if (state == GLUT_DOWN)          // 2 times?? in ONE click? -- solution is checking DOWN or UP
         {
             drawaxes = 1 - drawaxes;
+            display_light_source = 1 - display_light_source;
         }
         break;
 
@@ -475,6 +533,7 @@ void display()
     ****************************/
     drawAxes();
     drawCheckerBoard();
+    drawLightSources();
     drawShapes();
 
     //ADD this line in the end --- if you use double buffer (i.e. GL_DOUBLE)
@@ -496,6 +555,12 @@ void init()
     cameraAngle = 1.0;
     angle = 0;
 
+    //--------------------------------------------
+    display_light_source = 1;
+    fovY = 80.0;
+    window_height = window_width = 500;
+    //--------------------------------------------
+
     //clear the screen
     glClearColor(0, 0, 0, 0);
 
@@ -509,12 +574,12 @@ void init()
     glLoadIdentity();
 
     //give PERSPECTIVE parameters
-    gluPerspective(80, 1, 1, 1000.0);
+    gluPerspective(fovY, 1, 1, 1000.0);
     //field of view in the Y (vertically)
     //aspect ratio that determines the field of view in the X direction (horizontally)
     //near distance and far distance
 
-    pos = point(100, 100, 0);
+    pos = point(100, 100, 50);
     U = point(0, 0, 1), R = point(-1/sqrt(2.0),  1/sqrt(2.0), 0), L = point(-1/sqrt(2.0),  -1/sqrt(2.0), 0);
 }
 
@@ -535,7 +600,7 @@ void parseData()
 
             cin >> x.cx >> x.cy >> x.cz;
             cin >> x.radius;
-            cin >> x.r >> x.g >> x.b;
+            cin >> x.color.r >> x.color.g >> x.color.b;
             cin >> x.ambient_coeff >> x.diffuse_coeff >> x.specular_coeff >> x.reflection_coeff;
             cin >> x.specular_exponent;
 
@@ -548,7 +613,7 @@ void parseData()
 
             cin >> x.x >> x.y >> x.z;
             cin >> x.base >> x.height;
-            cin >> x.r >> x.g >> x.b;
+            cin >> x.color.r >> x.color.g >> x.color.b;
             cin >> x.ambient_coeff >> x.diffuse_coeff >> x.specular_coeff >> x.reflection_coeff;
             cin >> x.specular_exponent;
 
@@ -558,14 +623,25 @@ void parseData()
         else
             break;
     }
+
+    cin >> light_src_quantity;
+
+    point temp;
+
+    cin >> temp.x >> temp.y >> temp.z;
+    light_sources.push_back(temp);
+
+    cin >> temp.x >> temp.y >> temp.z;
+    light_sources.push_back(temp);
 }
+
 int main(int argc, char **argv)
 {
     freopen("description.txt", "r", stdin);
     parseData();
 
     glutInit(&argc, argv);
-    glutInitWindowSize(500, 500);
+    glutInitWindowSize(window_height, window_width);
     glutInitWindowPosition(0, 0);
     glutInitDisplayMode(GLUT_DEPTH | GLUT_DOUBLE | GLUT_RGB);    //Depth, Double buffer, RGB color
 
