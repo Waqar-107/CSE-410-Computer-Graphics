@@ -10,6 +10,9 @@
 #define clkwise 1
 #define anticlkwise -1
 
+#define window_height 500
+#define window_width 500
+
 #define nl printf("\n")
 
 using namespace std;
@@ -31,34 +34,122 @@ struct point
     }
 };
 
-struct Color
-{
-        double r, g, b;
-        Color(){}
-        Color(double r, double g, double b)
-        {
-            this->r = r;
-            this->g =g;
-            this->b = b;
-        }
-};
-
 class shape
 {
 public:
-    string name;
-    Color color;
+    double color[3];
     double ambient_coeff, diffuse_coeff, specular_coeff, reflection_coeff;
     double specular_exponent;
 
-    double cx, cy, cz;
+    point center;
     double radius;
 
-    double x, y, z;
+    point leftCorner;
     double base, height;
 
-    shape(string name){
-        this->name = name;
+    shape(){}
+    virtual void draw(){}
+};
+
+void drawSphere(double radius,int slices,int stacks)
+{
+	struct point points[100][100];
+	int i,j;
+	double h,r;
+
+	//generate points
+	for(i=0;i<=stacks;i++)
+	{
+		h=radius*sin(((double)i/(double)stacks)*(pi/2));
+		r=radius*cos(((double)i/(double)stacks)*(pi/2));
+		for(j=0;j<=slices;j++)
+		{
+			points[i][j].x=r*cos(((double)j/(double)slices)*2*pi);
+			points[i][j].y=r*sin(((double)j/(double)slices)*2*pi);
+			points[i][j].z=h;
+		}
+	}
+	//draw quads using generated points
+	for(i=0;i<stacks;i++)
+	{
+		for(j=0;j<slices;j++)
+		{
+			glBegin(GL_QUADS);{
+			    //upper hemisphere
+				glVertex3f(points[i][j].x,points[i][j].y,points[i][j].z);
+				glVertex3f(points[i][j+1].x,points[i][j+1].y,points[i][j+1].z);
+				glVertex3f(points[i+1][j+1].x,points[i+1][j+1].y,points[i+1][j+1].z);
+				glVertex3f(points[i+1][j].x,points[i+1][j].y,points[i+1][j].z);
+                //lower hemisphere
+                glVertex3f(points[i][j].x,points[i][j].y,-points[i][j].z);
+				glVertex3f(points[i][j+1].x,points[i][j+1].y,-points[i][j+1].z);
+				glVertex3f(points[i+1][j+1].x,points[i+1][j+1].y,-points[i+1][j+1].z);
+				glVertex3f(points[i+1][j].x,points[i+1][j].y,-points[i+1][j].z);
+			}glEnd();
+		}
+	}
+}
+
+class sphere : public shape
+{
+public:
+    sphere(){}
+
+    void draw()
+    {
+        glPushMatrix();
+        glTranslated(center.x, center.y, center.z);
+        glColor3f(color[0], color[1], color[2]);
+        drawSphere(radius, 90, 90);
+        glPopMatrix();
+    }
+};
+
+class pyramid : public shape
+{
+public:
+    pyramid(){}
+
+    void draw()
+    {
+        glColor3f(color[0], color[1], color[2]);
+        point top(leftCorner.x + base / 2, leftCorner.y + base / 2, leftCorner.z + height);
+
+        //1st triangle
+        glBegin(GL_TRIANGLES);
+        {
+            glVertex3f(leftCorner.x, leftCorner.y, leftCorner.z);    //leftmost corner
+            glVertex3f(leftCorner.x + base, leftCorner.y, leftCorner.z);
+            glVertex3f(top.x, top.y, top.z);
+        }
+        glEnd();
+
+        //2nd triangle
+        glBegin(GL_TRIANGLES);
+        {
+            glVertex3f(leftCorner.x, leftCorner.y, leftCorner.z);    //leftmost corner
+            glVertex3f(leftCorner.x, leftCorner.y + base, leftCorner.z);
+            glVertex3f(top.x, top.y, top.z);
+        }
+        glEnd();
+
+        //3rd triangle
+        glBegin(GL_TRIANGLES);
+        {
+            glVertex3f(leftCorner.x + base, leftCorner.y, leftCorner.z);
+            glVertex3f(leftCorner.x + base, leftCorner.y + base, leftCorner.z);
+            glVertex3f(top.x, top.y, top.z);
+        }
+        glEnd();
+
+        //4th triangle
+        glBegin(GL_TRIANGLES);
+        {
+            glVertex3f(leftCorner.x + base, leftCorner.y + base, leftCorner.z);
+            glVertex3f(leftCorner.x, leftCorner.y + base, leftCorner.z);
+            glVertex3f(top.x, top.y, top.z);
+        }
+        glEnd();
     }
 };
 
@@ -70,6 +161,12 @@ struct Ray
         start = point(0, 0, 0);
         dir = point(0, 0, 0);
     }
+
+    Ray(point start, point dir)
+    {
+        this->start = start;
+        this->dir = dir;
+    }
 };
 
 //===============================================
@@ -77,9 +174,8 @@ struct Ray
 point pos, U, R, L;
 int light_src_quantity;
 int level_of_recursion, pixels, n_objs;
-int window_height, window_width;
 double fovY;
-vector<shape> vec;
+vector<shape*> vec;
 vector<point> light_sources;
 //===============================================
 
@@ -215,45 +311,6 @@ void drawAxes()
     }
 }
 
-void drawSphere(double radius,int slices,int stacks)
-{
-	struct point points[100][100];
-	int i,j;
-	double h,r;
-
-	//generate points
-	for(i=0;i<=stacks;i++)
-	{
-		h=radius*sin(((double)i/(double)stacks)*(pi/2));
-		r=radius*cos(((double)i/(double)stacks)*(pi/2));
-		for(j=0;j<=slices;j++)
-		{
-			points[i][j].x=r*cos(((double)j/(double)slices)*2*pi);
-			points[i][j].y=r*sin(((double)j/(double)slices)*2*pi);
-			points[i][j].z=h;
-		}
-	}
-	//draw quads using generated points
-	for(i=0;i<stacks;i++)
-	{
-		for(j=0;j<slices;j++)
-		{
-			glBegin(GL_QUADS);{
-			    //upper hemisphere
-				glVertex3f(points[i][j].x,points[i][j].y,points[i][j].z);
-				glVertex3f(points[i][j+1].x,points[i][j+1].y,points[i][j+1].z);
-				glVertex3f(points[i+1][j+1].x,points[i+1][j+1].y,points[i+1][j+1].z);
-				glVertex3f(points[i+1][j].x,points[i+1][j].y,points[i+1][j].z);
-                //lower hemisphere
-                glVertex3f(points[i][j].x,points[i][j].y,-points[i][j].z);
-				glVertex3f(points[i][j+1].x,points[i][j+1].y,-points[i][j+1].z);
-				glVertex3f(points[i+1][j+1].x,points[i+1][j+1].y,-points[i+1][j+1].z);
-				glVertex3f(points[i+1][j].x,points[i+1][j].y,-points[i+1][j].z);
-			}glEnd();
-		}
-	}
-}
-
 //===============================================
 void drawCheckerBoard()
 {
@@ -298,58 +355,6 @@ void drawCheckerBoard()
 
 }
 
-drawPyramid(shape p)
-{
-    //we shall draw a square as the base then 4 triangles
-    glBegin(GL_QUADS);
-    {
-        //p.z += 0.01;
-        glVertex3f(p.x, p.y, p.z);    //leftmost corner
-        glVertex3f(p.x + p.base, p.y, p.z);
-        glVertex3f(p.x + p.base, p.y + p.base, p.z);
-        glVertex3f(p.x, p.y + p.base, p.z);
-    }
-    glEnd();
-
-    point top(p.x + p.base / 2, p.y + p.base / 2, p.z + p.height);
-
-    //1st triangle
-    glBegin(GL_TRIANGLES);
-    {
-        glVertex3f(p.x, p.y, p.z);    //leftmost corner
-        glVertex3f(p.x + p.base, p.y, p.z);
-        glVertex3f(top.x, top.y, top.z);
-    }
-    glEnd();
-
-    //2nd triangle
-    glBegin(GL_TRIANGLES);
-    {
-        glVertex3f(p.x, p.y, p.z);    //leftmost corner
-        glVertex3f(p.x, p.y + p.base, p.z);
-        glVertex3f(top.x, top.y, top.z);
-    }
-    glEnd();
-
-    //3rd triangle
-    glBegin(GL_TRIANGLES);
-    {
-        glVertex3f(p.x + p.base, p.y, p.z);
-        glVertex3f(p.x + p.base, p.y + p.base, p.z);
-        glVertex3f(top.x, top.y, top.z);
-    }
-    glEnd();
-
-    //4th triangle
-    glBegin(GL_TRIANGLES);
-    {
-        glVertex3f(p.x + p.base, p.y + p.base, p.z);
-        glVertex3f(p.x, p.y + p.base, p.z);
-        glVertex3f(top.x, top.y, top.z);
-    }
-    glEnd();
-}
-
 void drawLightSources()
 {
     if(!display_light_source)return;
@@ -367,28 +372,7 @@ void drawLightSources()
 void drawShapes()
 {
     for(int i = 0; i < vec.size(); i++)
-    {
-        if(vec[i].name == "sphere")
-        {
-            glPushMatrix();
-            {
-                glTranslated(vec[i].cx, vec[i].cy, vec[i].cz);
-                glColor3f(vec[i].color.r, vec[i].color.g, vec[i].color.b);
-                drawSphere(vec[i].radius, 90, 90);
-            }
-            glPopMatrix();
-        }
-
-        else if(vec[i].name == "pyramid")
-        {
-            glPushMatrix();
-            {
-                glColor3f(vec[i].color.r, vec[i].color.g, vec[i].color.b);
-                drawPyramid(vec[i]);
-            }
-            glPopMatrix();
-        }
-    }
+        vec[i]->draw();
 }
 
 void capture()
@@ -403,7 +387,6 @@ void capture()
     u = multiplyWithScaler(U, window_height / 2);
 
     topLeft = subtract(add(pos, u), add(l, r));
-
 }
 //===============================================
 
@@ -558,7 +541,6 @@ void init()
     //--------------------------------------------
     display_light_source = 1;
     fovY = 80.0;
-    window_height = window_width = 500;
     //--------------------------------------------
 
     //clear the screen
@@ -585,6 +567,8 @@ void init()
 
 void parseData()
 {
+    shape *x;
+
     cin >> level_of_recursion;
     cin >> pixels;
     cin >> n_objs;
@@ -596,32 +580,23 @@ void parseData()
 
         if(str == "sphere")
         {
-            shape x("sphere");
-
-            cin >> x.cx >> x.cy >> x.cz;
-            cin >> x.radius;
-            cin >> x.color.r >> x.color.g >> x.color.b;
-            cin >> x.ambient_coeff >> x.diffuse_coeff >> x.specular_coeff >> x.reflection_coeff;
-            cin >> x.specular_exponent;
-
-            vec.push_back(x);
+            x = new sphere();
+            cin >> x->center.x >> x->center.y >> x->center.z;
+            cin >> x->radius;
         }
 
         else if(str == "pyramid")
         {
-            shape x("pyramid");
-
-            cin >> x.x >> x.y >> x.z;
-            cin >> x.base >> x.height;
-            cin >> x.color.r >> x.color.g >> x.color.b;
-            cin >> x.ambient_coeff >> x.diffuse_coeff >> x.specular_coeff >> x.reflection_coeff;
-            cin >> x.specular_exponent;
-
-            vec.push_back(x);
+            x = new pyramid();
+            cin >> x->leftCorner.x >> x->leftCorner.y >> x->leftCorner.z;
+            cin >> x->base >> x->height;
         }
 
-        else
-            break;
+        cin >> x->color[0] >> x->color[1] >> x->color[2];
+        cin >> x->ambient_coeff >> x->diffuse_coeff >> x->specular_coeff >> x->reflection_coeff;
+        cin >> x->specular_exponent;
+
+        vec.push_back(x);
     }
 
     cin >> light_src_quantity;
