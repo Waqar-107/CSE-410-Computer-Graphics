@@ -6,7 +6,7 @@
 #include "bitmap_image.hpp"
 
 #define pi (2*acos(0.0))
-#define rotateVal 3
+#define rotateVal 5
 #define clkwise 1
 #define anticlkwise -1
 
@@ -34,6 +34,22 @@ struct point
     }
 };
 
+struct Ray
+{
+    point start, dir;
+    Ray()
+    {
+        start = point(0, 0, 0);
+        dir = point(0, 0, 0);
+    }
+
+    Ray(point start, point dir)
+    {
+        this->start = start;
+        this->dir = dir;
+    }
+};
+
 class shape
 {
 public:
@@ -49,6 +65,9 @@ public:
 
     shape(){}
     virtual void draw(){}
+    virtual double intersect(Ray ray, double *current_color, int level){
+        return -1;
+    }
 };
 
 void drawSphere(double radius,int slices,int stacks)
@@ -103,6 +122,11 @@ public:
         drawSphere(radius, 90, 90);
         glPopMatrix();
     }
+
+    double intersect(Ray ray, double *current_color, int level)
+    {
+
+    }
 };
 
 class pyramid : public shape
@@ -153,21 +177,53 @@ public:
     }
 };
 
-struct Ray
+class checkerBoard : public shape
 {
-    point start, dir;
-    Ray()
+public:
+    checkerBoard(){}
+    void draw()
     {
-        start = point(0, 0, 0);
-        dir = point(0, 0, 0);
-    }
+            /*
+        (-1000, 1000)  --------  (1000, 1000)
+        |                                                       |
+        |                                                       |
+        |                                                       |
+        (-1000, -1000) -------- (1000, -1000)
+        */
 
-    Ray(point start, point dir)
-    {
-        this->start = start;
-        this->dir = dir;
+        int X = -1000, Y = 1000;
+        int th = 20;
+
+        bool white = true, white_in;
+        for(int r = Y; r >= -Y + th; r -= th)
+        {
+            white_in = white;
+            for(int c = X; c <= -X + th; c += th)
+            {
+                if(white_in)
+                    glColor3f(1.0, 1.0, 1.0);
+                else
+                    glColor3f(0.0, 0.0, 0.0);
+
+                white_in = !white_in;
+
+                //left corner of the cell is r,c
+
+                glBegin(GL_QUADS);
+                {
+                    glVertex3f(r, c, 0);
+                    glVertex3f(r + th, c, 0);
+                    glVertex3f(r + th, c - th, 0);
+                    glVertex3f(r, c - th, 0);
+                }
+                glEnd();
+            }
+
+            white = !white;
+        }
     }
 };
+
 
 //===============================================
 // variables
@@ -175,6 +231,7 @@ point pos, U, R, L;
 int light_src_quantity;
 int level_of_recursion, pixels, n_objs;
 double fovY;
+shape *board;
 vector<shape*> vec;
 vector<point> light_sources;
 //===============================================
@@ -312,49 +369,6 @@ void drawAxes()
 }
 
 //===============================================
-void drawCheckerBoard()
-{
-    /*
-    (-1000, 1000)  --------  (1000, 1000)
-    |                                                       |
-    |                                                       |
-    |                                                       |
-    (-1000, -1000) -------- (1000, -1000)
-    */
-
-    int X = -1000, Y = 1000;
-    int th = 20;
-
-    bool white = true, white_in;
-    for(int r = Y; r >= -Y + th; r -= th)
-    {
-        white_in = white;
-        for(int c = X; c <= -X + th; c += th)
-        {
-            if(white_in)
-                glColor3f(1.0, 1.0, 1.0);
-            else
-                glColor3f(0.0, 0.0, 0.0);
-
-            white_in = !white_in;
-
-            //left corner of the cell is r,c
-
-            glBegin(GL_QUADS);
-            {
-                glVertex3f(r, c, 0);
-                glVertex3f(r + th, c, 0);
-                glVertex3f(r + th, c - th, 0);
-                glVertex3f(r, c - th, 0);
-            }
-            glEnd();
-        }
-
-        white = !white;
-    }
-
-}
-
 void drawLightSources()
 {
     if(!display_light_source)return;
@@ -371,6 +385,7 @@ void drawLightSources()
 
 void drawShapes()
 {
+    drawLightSources();
     for(int i = 0; i < vec.size(); i++)
         vec[i]->draw();
 }
@@ -387,6 +402,44 @@ void capture()
     u = multiplyWithScaler(U, window_height / 2);
 
     topLeft = subtract(add(pos, u), add(l, r));
+
+    double du = window_width / pixels;
+    double dv = window_height / pixels;
+
+    int nearest;
+    double t, t_min;
+    point corner;
+    double *dummy_color = new double[3];
+
+    for(int i = 0; i < pixels; i++)
+    {
+        for(int j = 0; j < pixels; j++)
+        {
+            corner.x = topLeft.x + (j * du * R.x) - (i * dv * U.x);
+            corner.y = topLeft.y + (j * du * R.y) - (i * dv * U.y);
+            corner.z = topLeft.z + (j * du * R.z) - (i * dv * U.z);
+
+            Ray ray(pos, subtract(corner, pos));
+            nearest = -1; t_min = 1e9;
+
+            for(int k = 0; k < vec.size(); i++)
+            {
+                t = vec[i]->intersect(ray, dummy_color, 0);
+
+                if(t <= 0)continue;
+                if(t < t_min)
+                    t_min = t, nearest = k;
+            }
+
+            if(nearest != -1)
+                t = vec[nearest]->intersect(ray, dummy_color, 1);
+
+            image.set_pixel(j, i, 255 * dummy_color[0], 255 * dummy_color[1], 255 * dummy_color[2]);
+        }
+    }
+
+    image.save_image("1505107_rayTracing.bmp");
+    image.clear();
 }
 //===============================================
 
@@ -515,8 +568,6 @@ void display()
     / Add your objects from here
     ****************************/
     drawAxes();
-    drawCheckerBoard();
-    drawLightSources();
     drawShapes();
 
     //ADD this line in the end --- if you use double buffer (i.e. GL_DOUBLE)
@@ -541,6 +592,8 @@ void init()
     //--------------------------------------------
     display_light_source = 1;
     fovY = 80.0;
+    board = new checkerBoard();
+    vec.push_back(board);
     //--------------------------------------------
 
     //clear the screen
