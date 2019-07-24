@@ -32,7 +32,70 @@ struct point
         this->y = y;
         this->z = z;
     }
+
+    void normalize(){
+        double sq = sqrt(x * x + y * y + z * z);
+
+        x /= sq;
+        y /= sq;
+        z /= sq;
+    }
 };
+
+vector<point> light_sources;
+
+float degreeToRadian(float deg) {
+    return (pi * deg) / 180;
+}
+
+void pf(point p){
+    printf("%.10f %.10f %.10f\n", p.x, p.y, p.z);
+}
+
+point add(point u, point v) {
+    return point(u.x + v.x, u.y + v.y, u.z + v.z);
+}
+
+point subtract(point u, point v) {
+    return point(u.x - v.x, u.y - v.y, u.z - v.z);
+}
+
+point multiplyWithScaler(point p, double sc)
+{
+    point temp;
+
+    temp.x = p.x * sc;
+    temp.y = p.y * sc;
+    temp.z = p.z * sc;
+
+    return temp;
+}
+
+point cross_product(point u, point v) {
+    point temp;
+    temp.x = u.y * v.z - u.z * v.y;
+    temp.y = u.z * v.x - u.x * v.z;
+    temp.z = u.x * v.y - u.y * v.x;
+
+    return temp;
+}
+
+point rotation3D(point v, point reff, int dir)
+{
+    //first determine a vector that is perpendicular to both \
+    the reference and the vector we are rotating
+    point p = cross_product(v, reff);
+    point temp;
+
+    //scale v by cos and p by sine and take their sum
+    double ang = dir * degreeToRadian(rotateVal);
+    temp.x = v.x * cos(ang) + p.x * sin(ang);
+    temp.y = v.y * cos(ang) + p.y * sin(ang);
+    temp.z = v.z * cos(ang) + p.z * sin(ang);
+
+    return temp;
+}
+
 
 struct Ray
 {
@@ -47,6 +110,10 @@ struct Ray
     {
         this->start = start;
         this->dir = dir;
+    }
+
+    void normalizeDirection() {
+        dir.normalize();
     }
 };
 
@@ -70,44 +137,17 @@ public:
     }
 };
 
-void drawSphere(double radius,int slices,int stacks)
-{
-	struct point points[100][100];
-	int i,j;
-	double h,r;
 
-	//generate points
-	for(i=0;i<=stacks;i++)
-	{
-		h=radius*sin(((double)i/(double)stacks)*(pi/2));
-		r=radius*cos(((double)i/(double)stacks)*(pi/2));
-		for(j=0;j<=slices;j++)
-		{
-			points[i][j].x=r*cos(((double)j/(double)slices)*2*pi);
-			points[i][j].y=r*sin(((double)j/(double)slices)*2*pi);
-			points[i][j].z=h;
-		}
-	}
-	//draw quads using generated points
-	for(i=0;i<stacks;i++)
-	{
-		for(j=0;j<slices;j++)
-		{
-			glBegin(GL_QUADS);{
-			    //upper hemisphere
-				glVertex3f(points[i][j].x,points[i][j].y,points[i][j].z);
-				glVertex3f(points[i][j+1].x,points[i][j+1].y,points[i][j+1].z);
-				glVertex3f(points[i+1][j+1].x,points[i+1][j+1].y,points[i+1][j+1].z);
-				glVertex3f(points[i+1][j].x,points[i+1][j].y,points[i+1][j].z);
-                //lower hemisphere
-                glVertex3f(points[i][j].x,points[i][j].y,-points[i][j].z);
-				glVertex3f(points[i][j+1].x,points[i][j+1].y,-points[i][j+1].z);
-				glVertex3f(points[i+1][j+1].x,points[i+1][j+1].y,-points[i+1][j+1].z);
-				glVertex3f(points[i+1][j].x,points[i+1][j].y,-points[i+1][j].z);
-			}glEnd();
-		}
-	}
-}
+//===============================================
+// variables
+point pos, U, R, L;
+int light_src_quantity;
+int level_of_recursion, pixels, n_objs;
+double fovY;
+shape *board;
+vector<shape*> vec;
+//===============================================
+
 
 class sphere : public shape
 {
@@ -119,13 +159,102 @@ public:
         glPushMatrix();
         glTranslated(center.x, center.y, center.z);
         glColor3f(color[0], color[1], color[2]);
-        drawSphere(radius, 90, 90);
+        glutSolidSphere(radius, 100, 200);
         glPopMatrix();
+    }
+
+    double intersecting_point(Ray ray)
+    {
+        point r0 = ray.start, rd = ray.dir;
+        r0.x -= center.x, r0.y -= center.y, r0.z -= center.z;
+
+        double a = 1;
+        double b = 2 * (rd.x * r0.x + rd.y * r0.y + rd.z * r0.z);
+        double c = r0.x * r0.x + r0.y * r0.y + r0.z * r0.z - (radius * radius);
+
+        double d = (b * b) - (4 * a * c);
+
+        if(d < 0)
+        {
+            //cout<<"returning -1 from sphere intersect\n";
+            return -1;
+        }
+
+        d = sqrt(d);
+        double t1 = (- b - d) / (2 * a);
+        double t2 = (- b + d) / (2 * a);
+
+        if(t2 > 0)
+        {
+            if(t1 < 0)
+                return t1;
+            else
+                return t2;
+        }
+    }
+
+    point getNormal(point x, point y)
+    {
+        point temp = subtract(x, y);
+        temp.normalize();
+
+        return temp;
+    }
+
+    point getReflection(point a, point b)
+    {
+
     }
 
     double intersect(Ray ray, double *current_color, int level)
     {
+        double t = intersecting_point(ray);
 
+        if(t <= 0) return -1;
+        if(level == 0) return t;
+
+        for(int i = 0; i < 3; i++)
+            current_color[i] = color[i] * ambient_coeff;
+
+        point intersectionPoint(add(ray.start, multiplyWithScaler(ray.dir, t)));
+        point normal = getNormal(intersectionPoint, center);
+        point reflection = getReflection(ray.dir, normal);
+
+        /*for(int i = 0; i < light_sources.size(); i++)
+        {
+            point light_direction = subtract(light_sources[i], intersectionPoint);
+            light_direction.normalize();
+
+
+        }*/
+
+        int nearest, t_min, t2;
+        double *dummy_color = new double[3];
+
+        if(level < level_of_recursion)
+        {
+            point start = add(intersectionPoint, reflection);
+            Ray reflectionRay(start, reflection);
+
+            nearest = -1; t_min = 1e9 * 1.0;
+            for(int k = 0; k < vec.size(); k++)
+            {
+                t2 = vec[k]->intersect(ray, dummy_color, 0);
+
+                if(t2 > 0 && t2 < t_min)
+                    t_min = t2, nearest = k;
+            }
+
+            if(nearest != -1)
+            {
+                t2 = vec[nearest]->intersect(reflectionRay, dummy_color, level + 1);
+
+                for(int i = 0; i < 3; i++)
+                    current_color[i] += (dummy_color[i] * reflection_coeff);
+            }
+        }
+
+        return t;
     }
 };
 
@@ -226,66 +355,6 @@ public:
 
 
 //===============================================
-// variables
-point pos, U, R, L;
-int light_src_quantity;
-int level_of_recursion, pixels, n_objs;
-double fovY;
-shape *board;
-vector<shape*> vec;
-vector<point> light_sources;
-//===============================================
-
-
-//===============================================
-float degreeToRadian(float deg) {
-    return (pi * deg) / 180;
-}
-
-point add(point u, point v) {
-    return point(u.x + v.x, u.y + v.y, u.z + v.z);
-}
-
-point subtract(point u, point v) {
-    return point(u.x - v.x, u.y - v.y, u.z - v.z);
-}
-
-point multiplyWithScaler(point p, double sc)
-{
-    point temp;
-
-    temp.x = p.x * sc;
-    temp.y = p.y * sc;
-    temp.z = p.z * sc;
-
-    return temp;
-}
-
-point cross_product(point u, point v) {
-    point temp;
-    temp.x = u.y * v.z - u.z * v.y;
-    temp.y = u.z * v.x - u.x * v.z;
-    temp.z = u.x * v.y - u.y * v.x;
-
-    return temp;
-}
-
-point rotation3D(point v, point reff, int dir)
-{
-    //first determine a vector that is perpendicular to both \
-    the reference and the vector we are rotating
-    point p = cross_product(v, reff);
-    point temp;
-
-    //scale v by cos and p by sine and take their sum
-    double ang = dir * degreeToRadian(rotateVal);
-    temp.x = v.x * cos(ang) + p.x * sin(ang);
-    temp.y = v.y * cos(ang) + p.y * sin(ang);
-    temp.z = v.z * cos(ang) + p.z * sin(ang);
-
-    return temp;
-}
-
 void move_forward() {
     pos = add(pos, L);
 }
@@ -378,7 +447,7 @@ void drawLightSources()
     {
         glPushMatrix();
             glTranslated(light_sources[i].x, light_sources[i].y, light_sources[i].z);
-            drawSphere(1, 90, 90);
+            glutSolidSphere(1, 90, 90);
         glPopMatrix();
     }
 }
@@ -401,10 +470,10 @@ void capture()
     r = multiplyWithScaler(R, window_width / 2);
     u = multiplyWithScaler(U, window_height / 2);
 
-    topLeft = subtract(add(pos, u), add(l, r));
+    topLeft = subtract(add(add(pos, l), u), r);
 
-    double du = window_width / pixels;
-    double dv = window_height / pixels;
+    double du = (double)window_width / pixels;
+    double dv = (double)window_height / pixels;
 
     int nearest;
     double t, t_min;
@@ -420,26 +489,29 @@ void capture()
             corner.z = topLeft.z + (j * du * R.z) - (i * dv * U.z);
 
             Ray ray(pos, subtract(corner, pos));
-            nearest = -1; t_min = 1e9;
+            ray.normalizeDirection();
 
-            for(int k = 0; k < vec.size(); i++)
+            nearest = -1; t_min = 1e9 * 1.0;
+            for(int k = 0; k < vec.size(); k++)
             {
-                t = vec[i]->intersect(ray, dummy_color, 0);
+                t = vec[k]->intersect(ray, dummy_color, 0);
 
-                if(t <= 0)continue;
-                if(t < t_min)
+                if(t > 0 && t < t_min)
                     t_min = t, nearest = k;
             }
 
             if(nearest != -1)
+            {
                 t = vec[nearest]->intersect(ray, dummy_color, 1);
-
-            image.set_pixel(j, i, 255 * dummy_color[0], 255 * dummy_color[1], 255 * dummy_color[2]);
+                image.set_pixel(j, i, 255 * dummy_color[0], 255 * dummy_color[1], 255 * dummy_color[2]);
+            }
         }
     }
 
     image.save_image("1505107_rayTracing.bmp");
     image.clear();
+
+    cout << "image captured\n";
 }
 //===============================================
 
