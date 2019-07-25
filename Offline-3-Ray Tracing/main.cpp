@@ -13,6 +13,7 @@
 #define window_height 500
 #define window_width 500
 
+#define dbg printf("in\n")
 #define nl printf("\n")
 
 using namespace std;
@@ -150,6 +151,8 @@ public:
 
     point leftCorner;
     double base, height;
+
+    point A, B, C;
 
     shape(){}
     virtual void draw(){}
@@ -310,51 +313,151 @@ public:
     }
 };
 
-class pyramid : public shape
+class triangle : public shape
 {
 public:
-    pyramid(){}
-
+    triangle(){}
     void draw()
     {
         glColor3f(color[0], color[1], color[2]);
-        point top(leftCorner.x + base / 2, leftCorner.y + base / 2, leftCorner.z + height);
-
-        //1st triangle
         glBegin(GL_TRIANGLES);
         {
-            glVertex3f(leftCorner.x, leftCorner.y, leftCorner.z);    //leftmost corner
-            glVertex3f(leftCorner.x + base, leftCorner.y, leftCorner.z);
-            glVertex3f(top.x, top.y, top.z);
+            glVertex3f(A.x, A.y, A.z);
+            glVertex3f(B.x, B.y, B.z);
+            glVertex3f(C.x, C.y, C.z);
         }
         glEnd();
+    }
 
-        //2nd triangle
-        glBegin(GL_TRIANGLES);
-        {
-            glVertex3f(leftCorner.x, leftCorner.y, leftCorner.z);    //leftmost corner
-            glVertex3f(leftCorner.x, leftCorner.y + base, leftCorner.z);
-            glVertex3f(top.x, top.y, top.z);
-        }
-        glEnd();
+    // (b - a) * (c - a);
+    point getNormal()
+    {
+        point temp = cross_product(subtract(B, A), subtract(C, A));
+        temp.normalize();
 
-        //3rd triangle
-        glBegin(GL_TRIANGLES);
-        {
-            glVertex3f(leftCorner.x + base, leftCorner.y, leftCorner.z);
-            glVertex3f(leftCorner.x + base, leftCorner.y + base, leftCorner.z);
-            glVertex3f(top.x, top.y, top.z);
-        }
-        glEnd();
+        return temp;
+    }
 
-        //4th triangle
-        glBegin(GL_TRIANGLES);
+    //Möller–Trumbore intersection algorithm
+    double intersecting_point(Ray ray)
+    {
+        const float EPSILON = 0.0000001;
+
+        //considering C = 0, A = 1, B = 2;
+        point edge1 = subtract(A, C);
+        point edge2 = subtract(B, C);
+
+        point h = cross_product(ray.dir, edge2);
+        double a = dot_product(h, edge1);
+
+        //this ray is parallel to the triangle
+        if(a > -EPSILON && a < EPSILON)
+            return -1;
+
+        double f = 1.0 / a;
+        point s = subtract(ray.start, C);
+        double u = f * dot_product(s, h);
+
+        if(u < 0.0 || u > 1.0) return -1;
+
+        point q = cross_product(s, edge1);
+        double v = f * dot_product(ray.dir, q);
+
+        if(v < 0.0 || u + v > 1.0) return -1;
+
+        //now we compute t
+        float t = f * dot_product(edge2, q);
+        if(t > EPSILON)
+            return t;
+        else
+            return -1;
+    }
+
+    double intersect(Ray ray, double *current_color, int level)
+    {
+        double t = intersecting_point(ray);
+
+        if(t <= 0) return -1;
+        if(level == 0) return t;
+
+        for(int i = 0; i < 3; i++)
+            current_color[i] = color[i] * ambient_coeff;
+
+        //intersection point is => (r0 + t * rd)
+        point intersectionPoint(add(ray.start, multiplyWithScaler(ray.dir, t)));
+        point normal = getNormal();
+        point reflection = getReflection(ray.dir, normal);
+
+        //Illumination
+        for(int i = 0; i < light_sources.size(); i++)
         {
-            glVertex3f(leftCorner.x + base, leftCorner.y + base, leftCorner.z);
-            glVertex3f(leftCorner.x, leftCorner.y + base, leftCorner.z);
-            glVertex3f(top.x, top.y, top.z);
+            point light_direction = subtract(light_sources[i], intersectionPoint);
+            light_direction.normalize();
+
+            point start = add(intersectionPoint, multiplyWithScaler(light_direction, 1.0));
+            double dist = distance_between_points(start, light_sources[i]);
+
+            Ray sunLight(start, light_direction);
+
+           //for all the objects check if the sunLight is obscured or not
+            bool obscured = false;
+            for(int j = 0; j < vec.size(); j++)
+            {
+                double temp = vec[j]->intersecting_point(sunLight);
+
+                if(t <= 0 || t > dist) continue;
+                obscured = true;
+
+                break;
+            }
+
+            if(!obscured)
+            {
+                Ray incident(light_sources[i], intersectionPoint);
+                point sunLightReflection = getReflection(incident.dir, normal);
+
+                point towards_camera = multiplyWithScaler(ray.dir, -1);
+
+                double lambart = max(0.0, dot_product(sunLight.dir, normal));
+                double phong = max(0.0, pow(dot_product(towards_camera, sunLightReflection), specular_exponent));
+
+                for(int c = 0; c < 3; c++)
+                    current_color[c] += (lambart * diffuse_coeff) + (phong * specular_coeff);
+            }
         }
-        glEnd();
+
+        int nearest, t_min, t2;
+        double *dummy_color = new double[3];
+
+        //Reflection
+        if(level < level_of_recursion)
+        {
+            point start = add(intersectionPoint, multiplyWithScaler(reflection, 1.0));
+            Ray reflectionRay(start, reflection);
+
+            nearest = -1; t_min = 1e9 * 1.0;
+            double *reflected_color = new double[3];
+
+            for(int k = 0; k < vec.size(); k++)
+            {
+                t2 = vec[k]->intersect(reflectionRay, reflected_color, 0);
+
+                if(t2 > 0 && t2 < t_min)
+                    t_min = t2, nearest = k;
+            }
+
+            if(nearest != -1)
+            {
+                t2 = vec[nearest]->intersect(reflectionRay, reflected_color, level + 1);
+
+                for(int c = 0; c < 3; c++)
+                    current_color[c] += (reflected_color[c] * reflection_coeff);
+            }
+
+            delete[] reflected_color;
+        }
+
+        return t;
     }
 };
 
@@ -393,8 +496,7 @@ public:
 
                 white_in = !white_in;
 
-                //left corner of the cell is r,c
-
+                //left corner of the cell is r, c
                 glBegin(GL_QUADS);
                 {
                     glVertex3f(r, c, 0);
@@ -419,8 +521,8 @@ public:
 
     void setColor(point p)
     {
-        int x = (p.x + 1000) / 20;
-        int y = (p.y + 1000) / 20;
+        int x = (p.x + 1000) / th;
+        int y = (p.y + 1000) / th;
 
         if((x + y) % 2 == 0)
             color[0] = color[1] = color[2] = 1.0;
@@ -444,7 +546,6 @@ public:
             t  = numerator / denominator;
 
         return t;
-        //return -1;
     }
 
     double intersect(Ray ray, double *current_color, int level)
@@ -541,7 +642,6 @@ public:
     }
 };
 
-
 //===============================================
 void move_forward() {
     pos = add(pos, L);
@@ -598,7 +698,6 @@ void tilt_counter_clockwise() {
     U = rotation3D(U, L, clkwise);
 }
 //===============================================
-
 
 void drawAxes()
 {
@@ -902,7 +1001,7 @@ void parseData()
 
         else if(str == "pyramid")
         {
-            x = new pyramid();
+            x = new triangle();
             cin >> x->leftCorner.x >> x->leftCorner.y >> x->leftCorner.z;
             cin >> x->base >> x->height;
         }
@@ -912,6 +1011,68 @@ void parseData()
         cin >> x->specular_exponent;
 
         vec.push_back(x);
+
+        if(str == "sphere") continue;
+
+        for(int k = 0; k < 3; k++)
+        {
+            vec.push_back(new triangle());
+
+            for(int j = 0; j < 3; j++)
+                vec.back()->color[j] = x->color[j];
+
+            vec.back()->ambient_coeff = x->ambient_coeff;
+            vec.back()->diffuse_coeff = x->diffuse_coeff;
+            vec.back()->specular_coeff = x->specular_coeff;
+            vec.back()->reflection_coeff = x->reflection_coeff;
+            vec.back()->specular_exponent = x->specular_exponent;
+        }
+
+         point top(x->leftCorner.x + x->base / 2, x->leftCorner.y + x->base / 2, x->leftCorner.z + x->height);
+         for(int j = vec.size() - 1; j >= vec.size() - 4; j--)
+            vec[j]->C = top;
+
+         int jdx = vec.size() - 1;
+
+        vec[jdx]->A = point(x->leftCorner.x, x->leftCorner.y, x->leftCorner.z);
+        vec[jdx]->B = point(x->leftCorner.x + x->base, x->leftCorner.y, x->leftCorner.z);
+        jdx--;
+
+        vec[jdx]->A = point(x->leftCorner.x, x->leftCorner.y, x->leftCorner.z);
+        vec[jdx]->B = point(x->leftCorner.x, x->leftCorner.y + x->base, x->leftCorner.z);
+        jdx--;
+
+        vec[jdx]->A = point(x->leftCorner.x + x->base, x->leftCorner.y, x->leftCorner.z);
+        vec[jdx]->B = point(x->leftCorner.x + x->base, x->leftCorner.y + x->base, x->leftCorner.z);
+        jdx--;
+
+        vec[jdx]->A = point(x->leftCorner.x + x->base, x->leftCorner.y + x->base, x->leftCorner.z);
+        vec[jdx]->B = point(x->leftCorner.x, x->leftCorner.y + x->base, x->leftCorner.z);
+
+        //now the base
+        for(int k = 0; k < 2; k++)
+        {
+            vec.push_back(new triangle());
+
+            for(int j = 0; j < 3; j++)
+                vec.back()->color[j] = x->color[j];
+
+            vec.back()->ambient_coeff = x->ambient_coeff;
+            vec.back()->diffuse_coeff = x->diffuse_coeff;
+            vec.back()->specular_coeff = x->specular_coeff;
+            vec.back()->reflection_coeff = x->reflection_coeff;
+            vec.back()->specular_exponent = x->specular_exponent;
+        }
+
+        jdx = vec.size() - 1;
+        vec[jdx]->A = point(x->leftCorner.x, x->leftCorner.y, x->leftCorner.z);
+        vec[jdx]->B = point(x->leftCorner.x + x->base, x->leftCorner.y, x->leftCorner.z);
+        vec[jdx]->C = point(x->leftCorner.x + x->base, x->leftCorner.y + x->base, x->leftCorner.z);
+
+        jdx--;
+        vec[jdx]->A = point(x->leftCorner.x, x->leftCorner.y, x->leftCorner.z);
+        vec[jdx]->B = point(x->leftCorner.x + x->base, x->leftCorner.y, x->leftCorner.z);
+        vec[jdx]->C = point(x->leftCorner.x + x->base, x->leftCorner.y + x->base, x->leftCorner.z);
     }
 
     cin >> light_src_quantity;
