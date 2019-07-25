@@ -16,6 +16,8 @@
 #define dbg printf("in\n")
 #define nl printf("\n")
 
+#define EPSILON  0.0000001
+
 using namespace std;
 
 double cameraHeight;
@@ -112,7 +114,7 @@ point rotation3D(point v, point reff, int dir) {
 point getReflection(point original_vec, point normal)
 {
     double coeff = dot_product(original_vec, normal) * 2;
-    point reflected_vec = subtract(original_vec, multiplyWithScaler(normal, coeff));
+    point reflected_vec = subtract(multiplyWithScaler(normal, coeff), original_vec);
 
     reflected_vec.normalize();
 
@@ -341,8 +343,6 @@ public:
     //Möller–Trumbore intersection algorithm
     double intersecting_point(Ray ray)
     {
-        const float EPSILON = 0.0000001;
-
         //considering C = 0, A = 1, B = 2;
         point edge1 = subtract(A, C);
         point edge2 = subtract(B, C);
@@ -521,8 +521,15 @@ public:
 
     void setColor(point p)
     {
-        int x = (p.x + 1000) / th;
-        int y = (p.y + 1000) / th;
+        //point not in plane
+        if(p.z != 0)
+        {
+            color[0] = color[1] = color[2] = 0.0;
+            return;
+        }
+
+        int x = (p.x + 1000) / 20;
+        int y = (p.y + 1000) / 20;
 
         if((x + y) % 2 == 0)
             color[0] = color[1] = color[2] = 1.0;
@@ -608,7 +615,6 @@ public:
         }
 
         int nearest, t_min, t2;
-        double *dummy_color = new double[3];
 
          //Reflection
         if(level < level_of_recursion)
