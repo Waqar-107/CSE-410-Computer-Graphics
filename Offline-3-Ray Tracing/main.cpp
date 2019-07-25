@@ -6,7 +6,7 @@
 #include "bitmap_image.hpp"
 
 #define pi (2*acos(0.0))
-#define rotateVal 5
+#define rotateVal 3
 #define clkwise 1
 #define anticlkwise -1
 
@@ -48,7 +48,7 @@ float degreeToRadian(float deg) {
     return (pi * deg) / 180;
 }
 
-void pf(point p){
+void pf(point p) {
     printf("%.10f %.10f %.10f\n", p.x, p.y, p.z);
 }
 
@@ -60,8 +60,7 @@ point subtract(point u, point v) {
     return point(u.x - v.x, u.y - v.y, u.z - v.z);
 }
 
-point multiplyWithScaler(point p, double sc)
-{
+point multiplyWithScaler(point p, double sc) {
     point temp;
 
     temp.x = p.x * sc;
@@ -80,8 +79,20 @@ point cross_product(point u, point v) {
     return temp;
 }
 
-point rotation3D(point v, point reff, int dir)
-{
+double dot_product(point u, point v) {
+    double res = u.x * v.x + u.y * v.y + u.z * v.z;
+    return res;
+}
+
+double distance_between_points(point u, point v) {
+    double x = u.x - v.x;
+    double y = u.y - v.y;
+    double z = u.z - v.z;
+
+    return sqrt(x * x + y * y + z * z);
+}
+
+point rotation3D(point v, point reff, int dir) {
     //first determine a vector that is perpendicular to both \
     the reference and the vector we are rotating
     point p = cross_product(v, reff);
@@ -96,6 +107,16 @@ point rotation3D(point v, point reff, int dir)
     return temp;
 }
 
+// r = a - (a.n)n
+point getReflection(point original_vec, point normal)
+{
+    double coeff = dot_product(original_vec, normal) * 2;
+    point reflected_vec = subtract(original_vec, multiplyWithScaler(normal, coeff));
+
+    reflected_vec.normalize();
+
+    return reflected_vec;
+}
 
 struct Ray
 {
@@ -135,6 +156,10 @@ public:
     virtual double intersect(Ray ray, double *current_color, int level){
         return -1;
     }
+
+    virtual double intersecting_point(Ray ray){
+        return -1;
+    }
 };
 
 
@@ -148,7 +173,6 @@ shape *board;
 vector<shape*> vec;
 //===============================================
 
-
 class sphere : public shape
 {
 public:
@@ -159,8 +183,16 @@ public:
         glPushMatrix();
         glTranslated(center.x, center.y, center.z);
         glColor3f(color[0], color[1], color[2]);
-        glutSolidSphere(radius, 100, 200);
+        glutSolidSphere(radius, 100, 100);
         glPopMatrix();
+    }
+
+     point getNormal(point x, point y)
+    {
+        point temp = subtract(x, y);
+        temp.normalize();
+
+        return temp;
     }
 
     double intersecting_point(Ray ray)
@@ -175,10 +207,7 @@ public:
         double d = (b * b) - (4 * a * c);
 
         if(d < 0)
-        {
-            //cout<<"returning -1 from sphere intersect\n";
             return -1;
-        }
 
         d = sqrt(d);
         double t1 = (- b - d) / (2 * a);
@@ -193,19 +222,6 @@ public:
         }
     }
 
-    point getNormal(point x, point y)
-    {
-        point temp = subtract(x, y);
-        temp.normalize();
-
-        return temp;
-    }
-
-    point getReflection(point a, point b)
-    {
-
-    }
-
     double intersect(Ray ray, double *current_color, int level)
     {
         double t = intersecting_point(ray);
@@ -216,25 +232,60 @@ public:
         for(int i = 0; i < 3; i++)
             current_color[i] = color[i] * ambient_coeff;
 
+        //intersection point is => (r0 + t * rd)
         point intersectionPoint(add(ray.start, multiplyWithScaler(ray.dir, t)));
         point normal = getNormal(intersectionPoint, center);
         point reflection = getReflection(ray.dir, normal);
 
-        /*for(int i = 0; i < light_sources.size(); i++)
+        //Illumination
+        for(int i = 0; i < light_sources.size(); i++)
         {
             point light_direction = subtract(light_sources[i], intersectionPoint);
             light_direction.normalize();
 
+            point start = add(intersectionPoint, multiplyWithScaler(light_direction, 1.0));
+            double dist = distance_between_points(start, light_sources[i]);
 
-        }*/
+           // Ray sunLight(start, light_sources[i]);
+           Ray sunLight(start, light_direction);
+
+           //for all the objects check if the sunLight is obscured or not
+            bool obscured = false;
+            for(int j = 0; j < vec.size(); j++)
+            {
+                double temp = vec[j]->intersecting_point(sunLight);
+
+                if(t <= 0 || t > dist) continue;
+                obscured = true;
+
+                break;
+            }
+
+            if(!obscured)
+            {
+                Ray incident(light_sources[i], intersectionPoint);
+                point sunLightReflection = getReflection(incident.dir, normal);
+
+                point towards_camera = multiplyWithScaler(ray.dir, -1);
+
+                double lambart = max(0.0, dot_product(sunLight.dir, normal));
+                double phong = max(0.0, pow(dot_product(towards_camera, sunLightReflection), specular_exponent));
+
+                for(int c = 0; c < 3; c++)
+                    current_color[c] += (lambart * diffuse_coeff) + (phong * specular_coeff);
+            }
+        }
 
         int nearest, t_min, t2;
         double *dummy_color = new double[3];
 
+        //Reflection
         if(level < level_of_recursion)
         {
             point start = add(intersectionPoint, reflection);
-            Ray reflectionRay(start, reflection);
+            point dest = add(intersectionPoint, multiplyWithScaler(reflection, 2));
+
+            Ray reflectionRay(start, dest);
 
             nearest = -1; t_min = 1e9 * 1.0;
             for(int k = 0; k < vec.size(); k++)
@@ -452,10 +503,11 @@ void drawLightSources()
     }
 }
 
+
 void drawShapes()
 {
-    drawLightSources();
-    for(int i = 0; i < vec.size(); i++)
+    //drawLightSources();
+    for(int i = 0; i < vec.size() - 2; i++)
         vec[i]->draw();
 }
 
