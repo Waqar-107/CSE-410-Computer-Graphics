@@ -16,7 +16,7 @@
 #define dbg printf("in\n")
 #define nl printf("\n")
 
-#define EPSILON  0.0000001
+#define EPSILON  0.000001
 
 using namespace std;
 
@@ -36,38 +36,43 @@ struct point
         this->z = z;
     }
 
-    void normalize(){
+    void normalize()
+    {
         double sq = sqrt(x * x + y * y + z * z);
 
-        x /= sq; x *= 1.0;
-        y /= sq; y *= 1.0;
-        z /= sq; z *= 1.0;
+        x /= sq;
+        x *= 1.0;
+        y /= sq;
+        y *= 1.0;
+        z /= sq;
+        z *= 1.0;
     }
 
-    void print(){
+    void print()
+    {
         cout << x << " " << y << " " << z << endl;
     }
 };
 
 vector<point> light_sources;
 
-float degreeToRadian(float deg) {
+float degreeToRadian(float deg)
+{
     return (pi * deg) / 180;
 }
 
-void pf(point p) {
-    printf("%.10f %.10f %.10f\n", p.x, p.y, p.z);
-}
-
-point add(point u, point v) {
+point add(point u, point v)
+{
     return point(u.x + v.x, u.y + v.y, u.z + v.z);
 }
 
-point subtract(point u, point v) {
+point subtract(point u, point v)
+{
     return point(u.x - v.x, u.y - v.y, u.z - v.z);
 }
 
-point multiplyWithScaler(point p, double sc) {
+point multiplyWithScaler(point p, double sc)
+{
     point temp;
 
     temp.x = p.x * sc;
@@ -77,7 +82,8 @@ point multiplyWithScaler(point p, double sc) {
     return temp;
 }
 
-point cross_product(point u, point v) {
+point cross_product(point u, point v)
+{
     point temp;
     temp.x = u.y * v.z - u.z * v.y;
     temp.y = u.z * v.x - u.x * v.z;
@@ -86,12 +92,14 @@ point cross_product(point u, point v) {
     return temp;
 }
 
-double dot_product(point u, point v) {
+double dot_product(point u, point v)
+{
     double res = u.x * v.x + u.y * v.y + u.z * v.z;
     return res;
 }
 
-double distance_between_points(point u, point v) {
+double distance_between_points(point u, point v)
+{
     double x = u.x - v.x;
     double y = u.y - v.y;
     double z = u.z - v.z;
@@ -99,7 +107,8 @@ double distance_between_points(point u, point v) {
     return sqrt(x * x + y * y + z * z);
 }
 
-point rotation3D(point v, point reff, int dir) {
+point rotation3D(point v, point reff, int dir)
+{
     //first determine a vector that is perpendicular to both \
     the reference and the vector we are rotating
     point p = cross_product(v, reff);
@@ -114,15 +123,24 @@ point rotation3D(point v, point reff, int dir) {
     return temp;
 }
 
-// r = (a.n)n - a
+
 point getReflection(point original_vec, point normal)
 {
     double coeff = dot_product(original_vec, normal) * 2;
-    point reflected_vec = subtract(multiplyWithScaler(normal, coeff), original_vec);
+    //point reflected_vec = subtract(multiplyWithScaler(normal, coeff), original_vec);
+    point reflected_vec = subtract(original_vec, multiplyWithScaler(normal, coeff));
 
     reflected_vec.normalize();
 
     return reflected_vec;
+}
+
+void clip_value(double &value, double mn, double mx)
+{
+    if(value < mn)
+        value = mn;
+    else if(value > mx)
+        value = mx;
 }
 
 struct Ray
@@ -138,10 +156,8 @@ struct Ray
     {
         this->start = start;
         this->dir = dir;
-    }
 
-    void normalizeDirection() {
-        dir.normalize();
+        this->dir.normalize();
     }
 };
 
@@ -160,13 +176,15 @@ public:
 
     point A, B, C;
 
-    shape(){}
-    virtual void draw(){}
-    virtual double intersect(Ray ray, double *current_color, int level, int idx){
+    shape() {}
+    virtual void draw() {}
+    virtual double intersect(Ray ray, double *current_color, int level, int idx)
+    {
         return -1;
     }
 
-    virtual double intersecting_point(Ray ray){
+    virtual double intersecting_point(Ray ray)
+    {
         return -1;
     }
 };
@@ -185,7 +203,7 @@ vector<shape*> vec;
 class sphere : public shape
 {
 public:
-    sphere(){}
+    sphere() {}
 
     void draw()
     {
@@ -196,7 +214,7 @@ public:
         glPopMatrix();
     }
 
-     point getNormal(point x, point y)
+    point getNormal(point x, point y)
     {
         //normal in that point is (P - C)
         point temp = subtract(x, y);
@@ -223,29 +241,34 @@ public:
         d = sqrt(d);
         double t1 = (- b - d) / (2 * a);
         double t2 = (- b + d) / (2 * a);
-
-        if(t2 > 0)
+return min(t1, t2);
+       /* if(t2 > 0)
         {
-            if(t1 < 0)
+            if(t1 > 0)
                 return t1;
             else
                 return t2;
         }
+
+        else
+            return -1;*/
     }
 
     double intersect(Ray ray, double *current_color, int level, int idx)
     {
         double t = intersecting_point(ray);
 
-        if(t <= 0) return -1;
-        if(level == 0) return t;
+        if(t <= 0)
+            return -1;
 
-        for(int i = 0; i < 3; i++)
-            current_color[i] = color[i] * ambient_coeff;
+        if(level == 0)
+            return t;
+
+        for(int c = 0; c < 3; c++)
+            current_color[c] = color[c] * ambient_coeff;
 
         //intersection point is => (r0 + t * rd)
         point intersectionPoint(add(ray.start, multiplyWithScaler(ray.dir, t)));
-
         point normal = getNormal(intersectionPoint, center);
         point reflection = getReflection(ray.dir, normal);
 
@@ -279,7 +302,9 @@ public:
                 double temp = vec[j]->intersecting_point(sunLight);
 
                 //if less than dist than nearest object to sunlight is not this particular object, so it is obscured
-                if(temp <= 0 || temp > dist) continue;
+                if(temp <= 0 || temp > dist)
+                    continue;
+
                 obscured = true;
 
                 break;
@@ -287,8 +312,11 @@ public:
 
             if(!obscured)
             {
-                double lambart = max(0.0, dot_product(L, N));
-                double phong = max(0.0, pow(dot_product(R, V), specular_exponent));
+                double lambart = dot_product(L, N);
+                double phong = pow(dot_product(R, V), specular_exponent);
+
+                clip_value(lambart, 0.0, 1.0);
+                clip_value(phong, 0.0, 1.0);
 
                 for(int c = 0; c < 3; c++)
                     current_color[c] += (lambart * diffuse_coeff * color[c]) + (phong * specular_coeff * color[c]);
@@ -296,36 +324,36 @@ public:
         }
 
         int nearest, t_min, t2;
-        double *dummy_color = new double[3];
 
         //Reflection
-        /*if(level < level_of_recursion)
-        {
-            point start = add(intersectionPoint, multiplyWithScaler(reflection, 1.0));
-            Ray reflectionRay(start, reflection);
+         if(level < level_of_recursion)
+         {
+             point start = add(intersectionPoint, reflection);
+             Ray reflectionRay(start, reflection);
 
-            nearest = -1; t_min = 1e9 * 1.0;
-            double *reflected_color = new double[3];
+             nearest = -1; t_min = 1e4;
+             double *reflected_color = new double[3];
+             for(int k = 0; k < 3; k++) reflected_color[k] = 0.0;
 
-            for(int k = 0; k < vec.size(); k++)
-            {
-                t2 = vec[k]->intersect(reflectionRay, reflected_color, 0, k);
+             for(int k = 0; k < vec.size(); k++)
+             {
+                 t2 = vec[k]->intersect(reflectionRay, reflected_color, 0, k);
 
-                if(t2 > 0 && t2 < t_min)
-                    t_min = t2, nearest = k;
-            }
+                 if(t2 > 0 && t2 < t_min)
+                     t_min = t2, nearest = k;
+             }
 
-            if(nearest != -1)
-            {
-                t2 = vec[nearest]->intersect(reflectionRay, reflected_color, level + 1, idx);
+             if(nearest != -1)
+             {
+                 vec[nearest]->intersect(reflectionRay, reflected_color, level + 1, nearest);
 
-                for(int c = 0; c < 3; c++)
-                    current_color[c] += (reflected_color[c] * reflection_coeff);
-            }
+                 for(int c = 0; c < 3; c++)
+                     current_color[c] += (reflected_color[c] * reflection_coeff);
+             }
 
-            delete[] reflected_color;
-        }
-*/
+             delete[] reflected_color;
+         }
+
         return t;
     }
 };
@@ -333,7 +361,7 @@ public:
 class triangle : public shape
 {
 public:
-    triangle(){}
+    triangle() {}
     void draw()
     {
         glColor3f(color[0], color[1], color[2]);
@@ -373,12 +401,14 @@ public:
         point s = subtract(ray.start, C);
         double u = f * dot_product(s, h);
 
-        if(u < 0.0 || u > 1.0) return -1;
+        if(u < 0.0 || u > 1.0)
+            return -1;
 
         point q = cross_product(s, edge1);
         double v = f * dot_product(ray.dir, q);
 
-        if(v < 0.0 || u + v > 1.0) return -1;
+        if(v < 0.0 || u + v > 1.0)
+            return -1;
 
         //now we compute t
         float t = f * dot_product(edge2, q);
@@ -392,8 +422,10 @@ public:
     {
         double t = intersecting_point(ray);
 
-        if(t <= 0) return -1;
-        if(level == 0) return t;
+        if(t <= 0)
+            return -1;
+        if(level == 0)
+            return t;
 
         for(int i = 0; i < 3; i++)
             current_color[i] = color[i] * ambient_coeff;
@@ -433,7 +465,8 @@ public:
                 double temp = vec[j]->intersecting_point(sunLight);
 
                 //if less than dist than nearest object to sunlight is not this particular object, so it is obscured
-                if(temp <= 0 || temp > dist) continue;
+                if(temp <= 0 || temp > dist)
+                    continue;
                 obscured = true;
 
                 break;
@@ -441,8 +474,11 @@ public:
 
             if(!obscured)
             {
-                double lambart = max(0.0, dot_product(L, N));
-                double phong = max(0.0, pow(dot_product(R, V), specular_exponent));
+                double lambart = dot_product(L, N);
+                double phong = pow(dot_product(R, V), specular_exponent);
+
+                clip_value(lambart, 0.0, 1.0);
+                clip_value(phong, 0.0, 1.0);
 
                 for(int c = 0; c < 3; c++)
                     current_color[c] += (lambart * diffuse_coeff * color[c]) + (phong * specular_coeff * color[c]);
@@ -450,36 +486,35 @@ public:
         }
 
         int nearest, t_min, t2;
-        double *dummy_color = new double[3];
 
         //Reflection
-      /*  if(level < level_of_recursion)
-        {
-            point start = add(intersectionPoint, multiplyWithScaler(reflection, 1.0));
-            Ray reflectionRay(start, reflection);
+         if(level < level_of_recursion)
+         {
+             point start = add(intersectionPoint, reflection);
+             Ray reflectionRay(start, reflection);
 
-            nearest = -1; t_min = 1e9 * 1.0;
-            double *reflected_color = new double[3];
+             nearest = -1; t_min = 1e4;
+             double *reflected_color = new double[3];
 
-            for(int k = 0; k < vec.size(); k++)
-            {
-                t2 = vec[k]->intersect(reflectionRay, reflected_color, 0, k);
+             for(int k = 0; k < vec.size(); k++)
+             {
+                 t2 = vec[k]->intersect(reflectionRay, reflected_color, 0, k);
 
-                if(t2 > 0 && t2 < t_min)
-                    t_min = t2, nearest = k;
-            }
+                 if(t2 > 0 && t2 < t_min)
+                     t_min = t2, nearest = k;
+             }
 
-            if(nearest != -1)
-            {
-                t2 = vec[nearest]->intersect(reflectionRay, reflected_color, level + 1, nearest);
+             if(nearest != -1)
+             {
+                 t2 = vec[nearest]->intersect(reflectionRay, reflected_color, level + 1, nearest);
 
-                for(int c = 0; c < 3; c++)
-                    current_color[c] += (reflected_color[c] * reflection_coeff);
-            }
+                 for(int c = 0; c < 3; c++)
+                     current_color[c] += (reflected_color[c] * reflection_coeff);
+             }
 
-            delete[] reflected_color;
-        }
-*/
+             delete[] reflected_color;
+         }
+
         return t;
     }
 };
@@ -487,7 +522,8 @@ public:
 class checkerBoard : public shape
 {
 public:
-    checkerBoard(){
+    checkerBoard()
+    {
         ambient_coeff = 0.4;
         diffuse_coeff = specular_coeff = reflection_coeff = 0.2;
         specular_exponent = 1.0;
@@ -495,16 +531,16 @@ public:
 
     void draw()
     {
-            /*
-        (-1000, 1000)  --------  (1000, 1000)
+        /*
+        (-1500, 1500)  --------  (1500, 1500)
         |                                                       |
         |                                                       |
         |                                                       |
-        (-1000, -1000) -------- (1000, -1000)
+        (-1500, -1500) -------- (1500, -1500)
         */
 
-        int X = -1000, Y = 1000;
-        int th = 20;
+        int X = -1500, Y = 1500;
+        int th = 30;
 
         bool white = true, white_in;
         for(int r = Y; r >= -Y + th; r -= th)
@@ -534,12 +570,14 @@ public:
         }
     }
 
-    point getNormal() {
+    point getNormal()
+    {
         return point(0, 0, 1);
     }
 
-    bool onSurface(point p) {
-        double th = 1000;
+    bool onSurface(point p)
+    {
+        double th = 1500;
         return (p.x >= -th && p.x <= th && p.y >= -th && p.y <= th && p.z == 0);
     }
 
@@ -552,8 +590,8 @@ public:
             return;
         }
 
-        int x = (p.x + 1000) / 20;
-        int y = (p.y + 1000) / 20;
+        int x = (p.x + 1500) / 30;
+        int y = (p.y + 1500) / 30;
 
         if((x + y) % 2 == 0)
             color[0] = color[1] = color[2] = 1.0;
@@ -581,29 +619,37 @@ public:
 
     double intersect(Ray ray, double *current_color, int level, int idx)
     {
-         double t = intersecting_point(ray);
+        double t = intersecting_point(ray);
 
-        if(t <= 0) return -1;
-        if(level == 0) return t;
+        if(t <= 0)
+            return -1;
+
+        if(level == 0)
+            return t;
+
+        point normal = getNormal();
+
+        //if ray and normal are parallel
+        double dt = dot_product(ray.dir, normal) * EPSILON;
+        if(dt == 0)return -1;
 
         //check if the intersection plane is on the checker-board, then determine its color
         //intersection point is => (r0 + t * rd)
         point intersectionPoint(add(ray.start, multiplyWithScaler(ray.dir, t)));
 
         //check if not out of the plane
-        if(!onSurface(intersectionPoint))return -1;
+        if(!onSurface(intersectionPoint))
+            return -1;
 
         setColor(intersectionPoint);
 
         for(int c = 0; c < 3; c++)
             current_color[c] = color[c] * ambient_coeff;
 
-
-        point normal = getNormal();
         point reflection = getReflection(ray.dir, normal);
 
         //Illumination
-        for(int i = 0; i < light_sources.size(); i++)
+        /*for(int i = 0; i < light_sources.size(); i++)
         {
             point L = subtract(light_sources[i], intersectionPoint);
             L.normalize();
@@ -632,7 +678,8 @@ public:
                 double temp = vec[j]->intersecting_point(sunLight);
 
                 //if less than dist than nearest object to sunlight is not this particular object, so it is obscured
-                if(temp <= 0 || temp > dist) continue;
+                if(temp <= 0 || temp > dist)
+                    continue;
                 obscured = true;
 
                 break;
@@ -640,23 +687,26 @@ public:
 
             if(!obscured)
             {
-                double lambart = max(0.0, dot_product(L, N));
-                double phong = max(0.0, pow(dot_product(R, V), specular_exponent));
+                double lambart = dot_product(L, N);
+                double phong = pow(dot_product(R, V), specular_exponent);
+
+                clip_value(lambart, 0.0, 1.0);
+                clip_value(phong, 0.0, 1.0);
 
                 for(int c = 0; c < 3; c++)
                     current_color[c] += (lambart * diffuse_coeff * color[c]) + (phong * specular_coeff * color[c]);
             }
         }
-
+*/
         int nearest, t_min, t2;
 
-         //Reflection
+        //Reflection
         /*if(level < level_of_recursion)
         {
-            point start = add(intersectionPoint, multiplyWithScaler(reflection, 1.0));
+            point start = add(intersectionPoint, multiplyWithScaler(reflection, -1.0));
             Ray reflectionRay(start, reflection);
 
-            nearest = -1; t_min = 1e9 * 1.0;
+            nearest = -1; t_min = 1e4;
             double *reflected_color = new double[3];
 
             for(int k = 0; k < vec.size(); k++)
@@ -683,57 +733,69 @@ public:
 };
 
 //===============================================
-void move_forward() {
+void move_forward()
+{
     pos = add(pos, L);
 }
 
-void move_backward() {
+void move_backward()
+{
     pos = subtract(pos, L);
 }
 
-void move_right() {
+void move_right()
+{
     pos = add(pos, R);
 }
 
-void move_left() {
+void move_left()
+{
     pos = subtract(pos, R);
 }
 
-void move_up() {
+void move_up()
+{
     pos = add(pos, U);
 }
 
-void move_down() {
+void move_down()
+{
     pos = subtract(pos, U);
 }
 
-void look_left() {
+void look_left()
+{
     //rotate l and r
     L = rotation3D(L, U, anticlkwise);
     R = rotation3D(R, U, anticlkwise);
 }
 
-void look_right() {
+void look_right()
+{
     L = rotation3D(L, U, clkwise);
     R = rotation3D(R, U, clkwise);
 }
 
-void look_up() {
+void look_up()
+{
     L = rotation3D(L, R, anticlkwise);
     U = rotation3D(U, R, anticlkwise);
 }
 
-void look_down() {
+void look_down()
+{
     L = rotation3D(L, R, clkwise);
     U = rotation3D(U, R, clkwise);
 }
 
-void tilt_clockwise() {
+void tilt_clockwise()
+{
     R = rotation3D(R, L, anticlkwise);
     U = rotation3D(U, L, anticlkwise);
 }
 
-void tilt_counter_clockwise() {
+void tilt_counter_clockwise()
+{
     R = rotation3D(R, L, clkwise);
     U = rotation3D(U, L, clkwise);
 }
@@ -767,14 +829,15 @@ void drawAxes()
 //===============================================
 void drawLightSources()
 {
-    if(!display_light_source)return;
+    if(!display_light_source)
+        return;
 
     glColor3f(1, 1, 1);
     for(int i = 0; i < light_sources.size(); i++)
     {
         glPushMatrix();
-            glTranslated(light_sources[i].x, light_sources[i].y, light_sources[i].z);
-            glutSolidSphere(1, 90, 90);
+        glTranslated(light_sources[i].x, light_sources[i].y, light_sources[i].z);
+        glutSolidSphere(1, 90, 90);
         glPopMatrix();
     }
 }
@@ -817,9 +880,9 @@ void capture()
             corner.z = topLeft.z + (j * du * R.z) - (i * dv * U.z);
 
             Ray ray(pos, subtract(corner, pos));
-            ray.normalizeDirection();
 
-            nearest = -1; t_min = 1e9 * 1.0;
+            nearest = -1;
+            t_min = 1e4 * 1.0;
             for(int k = 0; k < vec.size(); k++)
             {
                 //by giving level 0 we denote that we  only want to know the nearest object
@@ -834,6 +897,9 @@ void capture()
                 t = vec[nearest]->intersect(ray, dummy_color, 1, nearest);
                 image.set_pixel(j, i, 255 * dummy_color[0], 255 * dummy_color[1], 255 * dummy_color[2]);
             }
+
+            //else
+              //  image.set_pixel(j, i, 0.0, 0.0, 0.0);
         }
     }
 
@@ -992,7 +1058,7 @@ void init()
 
     //--------------------------------------------
     display_light_source = 1;
-    fovY = 80.0;
+    fovY = 90.0;
     //--------------------------------------------
 
     //clear the screen
@@ -1020,7 +1086,7 @@ void init()
 void parseData()
 {
     board = new checkerBoard();
-    //vec.push_back(board);
+    vec.push_back(board);
 
     shape *x;
 
@@ -1053,7 +1119,8 @@ void parseData()
 
         vec.push_back(x);
 
-        if(str == "sphere") continue;
+        if(str == "sphere")
+            continue;
 
         for(int k = 0; k < 3; k++)
         {
@@ -1069,11 +1136,11 @@ void parseData()
             vec.back()->specular_exponent = x->specular_exponent;
         }
 
-         point top(x->leftCorner.x + x->base / 2, x->leftCorner.y + x->base / 2, x->leftCorner.z + x->height);
-         for(int j = vec.size() - 1; j >= vec.size() - 4; j--)
+        point top(x->leftCorner.x + x->base / 2, x->leftCorner.y + x->base / 2, x->leftCorner.z + x->height);
+        for(int j = vec.size() - 1; j >= vec.size() - 4; j--)
             vec[j]->C = top;
 
-         int jdx = vec.size() - 1;
+        int jdx = vec.size() - 1;
 
         vec[jdx]->A = point(x->leftCorner.x, x->leftCorner.y, x->leftCorner.z);
         vec[jdx]->B = point(x->leftCorner.x + x->base, x->leftCorner.y, x->leftCorner.z);
@@ -1129,6 +1196,7 @@ void parseData()
 
 int main(int argc, char **argv)
 {
+    //freopen("out.txt", "w", stdout);
     freopen("description.txt", "r", stdin);
     parseData();
 
