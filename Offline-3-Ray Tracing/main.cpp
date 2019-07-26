@@ -39,9 +39,13 @@ struct point
     void normalize(){
         double sq = sqrt(x * x + y * y + z * z);
 
-        x /= sq;
-        y /= sq;
-        z /= sq;
+        x /= sq; x *= 1.0;
+        y /= sq; y *= 1.0;
+        z /= sq; z *= 1.0;
+    }
+
+    void print(){
+        cout << x << " " << y << " " << z << endl;
     }
 };
 
@@ -110,7 +114,7 @@ point rotation3D(point v, point reff, int dir) {
     return temp;
 }
 
-// r = a - (a.n)n
+// r = (a.n)n - a
 point getReflection(point original_vec, point normal)
 {
     double coeff = dot_product(original_vec, normal) * 2;
@@ -158,7 +162,7 @@ public:
 
     shape(){}
     virtual void draw(){}
-    virtual double intersect(Ray ray, double *current_color, int level){
+    virtual double intersect(Ray ray, double *current_color, int level, int idx){
         return -1;
     }
 
@@ -194,20 +198,22 @@ public:
 
      point getNormal(point x, point y)
     {
+        //normal in that point is (P - C)
         point temp = subtract(x, y);
         temp.normalize();
 
         return temp;
     }
 
+    //using algebraic way
+    //(P - C).(P - C) = r ^ 2 where P = R0 + t * Rd
     double intersecting_point(Ray ray)
     {
         point r0 = ray.start, rd = ray.dir;
-        r0 = subtract(r0, center);
 
-        double a = 1;
-        double b = 2 * (rd.x * r0.x + rd.y * r0.y + rd.z * r0.z);
-        double c = r0.x * r0.x + r0.y * r0.y + r0.z * r0.z - (radius * radius);
+        double a = 1.0;     //as rd is unit
+        double b = 2 * dot_product(rd, subtract(r0, center));
+        double c = dot_product(subtract(r0, center), subtract(r0, center)) - (radius * radius);
 
         double d = (b * b) - (4 * a * c);
 
@@ -227,7 +233,7 @@ public:
         }
     }
 
-    double intersect(Ray ray, double *current_color, int level)
+    double intersect(Ray ray, double *current_color, int level, int idx)
     {
         double t = intersecting_point(ray);
 
@@ -239,27 +245,41 @@ public:
 
         //intersection point is => (r0 + t * rd)
         point intersectionPoint(add(ray.start, multiplyWithScaler(ray.dir, t)));
+
         point normal = getNormal(intersectionPoint, center);
         point reflection = getReflection(ray.dir, normal);
 
         //Illumination
         for(int i = 0; i < light_sources.size(); i++)
         {
-            point light_direction = subtract(light_sources[i], intersectionPoint);
-            light_direction.normalize();
+            point L = subtract(light_sources[i], intersectionPoint);
+            L.normalize();
 
-            point start = add(intersectionPoint, multiplyWithScaler(light_direction, 1.0));
-            double dist = distance_between_points(start, light_sources[i]);
+            point N = getNormal(intersectionPoint, center);
+            N.normalize();
 
-            Ray sunLight(start, light_direction);
+            point R = getReflection(L, N);
+            R.normalize();
 
-           //for all the objects check if the sunLight is obscured or not
+            point V = subtract(intersectionPoint, pos);
+            V.normalize();
+
+            Ray sunLight(intersectionPoint, L);
+
+            //check if obscured
             bool obscured = false;
+            double dist = distance_between_points(light_sources[i], intersectionPoint);
+
             for(int j = 0; j < vec.size(); j++)
             {
+                //no need to check this object
+                if(j == idx)
+                    continue;
+
                 double temp = vec[j]->intersecting_point(sunLight);
 
-                if(t <= 0 || t > dist) continue;
+                //if less than dist than nearest object to sunlight is not this particular object, so it is obscured
+                if(temp <= 0 || temp > dist) continue;
                 obscured = true;
 
                 break;
@@ -267,16 +287,11 @@ public:
 
             if(!obscured)
             {
-                Ray incident(light_sources[i], intersectionPoint);
-                point sunLightReflection = getReflection(incident.dir, normal);
-
-                point towards_camera = multiplyWithScaler(ray.dir, -1);
-
-                double lambart = max(0.0, dot_product(sunLight.dir, normal));
-                double phong = max(0.0, pow(dot_product(towards_camera, sunLightReflection), specular_exponent));
+                double lambart = max(0.0, dot_product(L, N));
+                double phong = max(0.0, pow(dot_product(R, V), specular_exponent));
 
                 for(int c = 0; c < 3; c++)
-                    current_color[c] += (lambart * diffuse_coeff) + (phong * specular_coeff);
+                    current_color[c] += (lambart * diffuse_coeff * color[c]) + (phong * specular_coeff * color[c]);
             }
         }
 
@@ -284,7 +299,7 @@ public:
         double *dummy_color = new double[3];
 
         //Reflection
-        if(level < level_of_recursion)
+        /*if(level < level_of_recursion)
         {
             point start = add(intersectionPoint, multiplyWithScaler(reflection, 1.0));
             Ray reflectionRay(start, reflection);
@@ -294,7 +309,7 @@ public:
 
             for(int k = 0; k < vec.size(); k++)
             {
-                t2 = vec[k]->intersect(reflectionRay, reflected_color, 0);
+                t2 = vec[k]->intersect(reflectionRay, reflected_color, 0, k);
 
                 if(t2 > 0 && t2 < t_min)
                     t_min = t2, nearest = k;
@@ -302,7 +317,7 @@ public:
 
             if(nearest != -1)
             {
-                t2 = vec[nearest]->intersect(reflectionRay, reflected_color, level + 1);
+                t2 = vec[nearest]->intersect(reflectionRay, reflected_color, level + 1, idx);
 
                 for(int c = 0; c < 3; c++)
                     current_color[c] += (reflected_color[c] * reflection_coeff);
@@ -310,7 +325,7 @@ public:
 
             delete[] reflected_color;
         }
-
+*/
         return t;
     }
 };
@@ -373,7 +388,7 @@ public:
             return -1;
     }
 
-    double intersect(Ray ray, double *current_color, int level)
+    double intersect(Ray ray, double *current_color, int level, int idx)
     {
         double t = intersecting_point(ray);
 
@@ -391,21 +406,34 @@ public:
         //Illumination
         for(int i = 0; i < light_sources.size(); i++)
         {
-            point light_direction = subtract(light_sources[i], intersectionPoint);
-            light_direction.normalize();
+            point L = subtract(light_sources[i], intersectionPoint);
+            L.normalize();
 
-            point start = add(intersectionPoint, multiplyWithScaler(light_direction, 1.0));
-            double dist = distance_between_points(start, light_sources[i]);
+            point N = getNormal();
+            N.normalize();
 
-            Ray sunLight(start, light_direction);
+            point R = getReflection(L, N);
+            R.normalize();
 
-           //for all the objects check if the sunLight is obscured or not
+            point V = subtract(intersectionPoint, pos);
+            V.normalize();
+
+            Ray sunLight(intersectionPoint, L);
+
+            //check if obscured
             bool obscured = false;
+            double dist = distance_between_points(light_sources[i], intersectionPoint);
+
             for(int j = 0; j < vec.size(); j++)
             {
+                //no need to check this object
+                if(j == idx)
+                    continue;
+
                 double temp = vec[j]->intersecting_point(sunLight);
 
-                if(t <= 0 || t > dist) continue;
+                //if less than dist than nearest object to sunlight is not this particular object, so it is obscured
+                if(temp <= 0 || temp > dist) continue;
                 obscured = true;
 
                 break;
@@ -413,16 +441,11 @@ public:
 
             if(!obscured)
             {
-                Ray incident(light_sources[i], intersectionPoint);
-                point sunLightReflection = getReflection(incident.dir, normal);
-
-                point towards_camera = multiplyWithScaler(ray.dir, -1);
-
-                double lambart = max(0.0, dot_product(sunLight.dir, normal));
-                double phong = max(0.0, pow(dot_product(towards_camera, sunLightReflection), specular_exponent));
+                double lambart = max(0.0, dot_product(L, N));
+                double phong = max(0.0, pow(dot_product(R, V), specular_exponent));
 
                 for(int c = 0; c < 3; c++)
-                    current_color[c] += (lambart * diffuse_coeff) + (phong * specular_coeff);
+                    current_color[c] += (lambart * diffuse_coeff * color[c]) + (phong * specular_coeff * color[c]);
             }
         }
 
@@ -430,7 +453,7 @@ public:
         double *dummy_color = new double[3];
 
         //Reflection
-        if(level < level_of_recursion)
+      /*  if(level < level_of_recursion)
         {
             point start = add(intersectionPoint, multiplyWithScaler(reflection, 1.0));
             Ray reflectionRay(start, reflection);
@@ -440,7 +463,7 @@ public:
 
             for(int k = 0; k < vec.size(); k++)
             {
-                t2 = vec[k]->intersect(reflectionRay, reflected_color, 0);
+                t2 = vec[k]->intersect(reflectionRay, reflected_color, 0, k);
 
                 if(t2 > 0 && t2 < t_min)
                     t_min = t2, nearest = k;
@@ -448,7 +471,7 @@ public:
 
             if(nearest != -1)
             {
-                t2 = vec[nearest]->intersect(reflectionRay, reflected_color, level + 1);
+                t2 = vec[nearest]->intersect(reflectionRay, reflected_color, level + 1, nearest);
 
                 for(int c = 0; c < 3; c++)
                     current_color[c] += (reflected_color[c] * reflection_coeff);
@@ -456,7 +479,7 @@ public:
 
             delete[] reflected_color;
         }
-
+*/
         return t;
     }
 };
@@ -467,7 +490,7 @@ public:
     checkerBoard(){
         ambient_coeff = 0.4;
         diffuse_coeff = specular_coeff = reflection_coeff = 0.2;
-        specular_exponent = 1;
+        specular_exponent = 1.0;
     }
 
     void draw()
@@ -516,7 +539,8 @@ public:
     }
 
     bool onSurface(point p) {
-        return (p.x >= -1000 && p.x <= 1000 && p.y >= -1000 && p.y <= 1000 && p.z == 0);
+        double th = 1000;
+        return (p.x >= -th && p.x <= th && p.y >= -th && p.y <= th && p.z == 0);
     }
 
     void setColor(point p)
@@ -555,7 +579,7 @@ public:
         return t;
     }
 
-    double intersect(Ray ray, double *current_color, int level)
+    double intersect(Ray ray, double *current_color, int level, int idx)
     {
          double t = intersecting_point(ray);
 
@@ -565,12 +589,14 @@ public:
         //check if the intersection plane is on the checker-board, then determine its color
         //intersection point is => (r0 + t * rd)
         point intersectionPoint(add(ray.start, multiplyWithScaler(ray.dir, t)));
+
+        //check if not out of the plane
         if(!onSurface(intersectionPoint))return -1;
 
         setColor(intersectionPoint);
 
-        for(int i = 0; i < 3; i++)
-            current_color[i] = color[i] * ambient_coeff;
+        for(int c = 0; c < 3; c++)
+            current_color[c] = color[c] * ambient_coeff;
 
 
         point normal = getNormal();
@@ -579,21 +605,34 @@ public:
         //Illumination
         for(int i = 0; i < light_sources.size(); i++)
         {
-            point light_direction = subtract(light_sources[i], intersectionPoint);
-            light_direction.normalize();
+            point L = subtract(light_sources[i], intersectionPoint);
+            L.normalize();
 
-            point start = add(intersectionPoint, multiplyWithScaler(light_direction, 1.0));
-            double dist = distance_between_points(start, light_sources[i]);
+            point N = getNormal();
+            N.normalize();
 
-            Ray sunLight(start, light_direction);
+            point R = getReflection(L, N);
+            R.normalize();
 
-           //for all the objects check if the sunLight is obscured or not
+            point V = subtract(intersectionPoint, pos);
+            V.normalize();
+
+            Ray sunLight(intersectionPoint, L);
+
+            //check if obscured
             bool obscured = false;
+            double dist = distance_between_points(light_sources[i], intersectionPoint);
+
             for(int j = 0; j < vec.size(); j++)
             {
+                //no need to check this object
+                if(j == idx)
+                    continue;
+
                 double temp = vec[j]->intersecting_point(sunLight);
 
-                if(t <= 0 || t > dist) continue;
+                //if less than dist than nearest object to sunlight is not this particular object, so it is obscured
+                if(temp <= 0 || temp > dist) continue;
                 obscured = true;
 
                 break;
@@ -601,23 +640,18 @@ public:
 
             if(!obscured)
             {
-                Ray incident(light_sources[i], intersectionPoint);
-                point sunLightReflection = getReflection(incident.dir, normal);
-
-                point towards_camera = multiplyWithScaler(ray.dir, -1);
-
-                double lambart = max(0.0, dot_product(sunLight.dir, normal));
-                double phong = max(0.0, pow(dot_product(towards_camera, sunLightReflection), specular_exponent));
+                double lambart = max(0.0, dot_product(L, N));
+                double phong = max(0.0, pow(dot_product(R, V), specular_exponent));
 
                 for(int c = 0; c < 3; c++)
-                    current_color[c] += (lambart * diffuse_coeff) + (phong * specular_coeff);
+                    current_color[c] += (lambart * diffuse_coeff * color[c]) + (phong * specular_coeff * color[c]);
             }
         }
 
         int nearest, t_min, t2;
 
          //Reflection
-        if(level < level_of_recursion)
+        /*if(level < level_of_recursion)
         {
             point start = add(intersectionPoint, multiplyWithScaler(reflection, 1.0));
             Ray reflectionRay(start, reflection);
@@ -627,7 +661,7 @@ public:
 
             for(int k = 0; k < vec.size(); k++)
             {
-                t2 = vec[k]->intersect(reflectionRay, reflected_color, 0);
+                t2 = vec[k]->intersect(reflectionRay, reflected_color, 0, k);
 
                 if(t2 > 0 && t2 < t_min)
                     t_min = t2, nearest = k;
@@ -635,7 +669,7 @@ public:
 
             if(nearest != -1)
             {
-                t2 = vec[nearest]->intersect(reflectionRay, reflected_color, level + 1);
+                t2 = vec[nearest]->intersect(reflectionRay, reflected_color, level + 1, nearest);
 
                 for(int c = 0; c < 3; c++)
                     current_color[c] += (reflected_color[c] * reflection_coeff);
@@ -643,7 +677,7 @@ public:
 
             delete[] reflected_color;
         }
-
+*/
         return t;
     }
 };
@@ -748,7 +782,7 @@ void drawLightSources()
 
 void drawShapes()
 {
-    //drawLightSources();
+    drawLightSources();
     for(int i = 0; i < vec.size(); i++)
         vec[i]->draw();
 }
@@ -788,7 +822,8 @@ void capture()
             nearest = -1; t_min = 1e9 * 1.0;
             for(int k = 0; k < vec.size(); k++)
             {
-                t = vec[k]->intersect(ray, dummy_color, 0);
+                //by giving level 0 we denote that we  only want to know the nearest object
+                t = vec[k]->intersect(ray, dummy_color, 0, k);
 
                 if(t > 0 && t < t_min)
                     t_min = t, nearest = k;
@@ -796,7 +831,7 @@ void capture()
 
             if(nearest != -1)
             {
-                t = vec[nearest]->intersect(ray, dummy_color, 1);
+                t = vec[nearest]->intersect(ray, dummy_color, 1, nearest);
                 image.set_pixel(j, i, 255 * dummy_color[0], 255 * dummy_color[1], 255 * dummy_color[2]);
             }
         }
@@ -985,7 +1020,7 @@ void init()
 void parseData()
 {
     board = new checkerBoard();
-    vec.push_back(board);
+    //vec.push_back(board);
 
     shape *x;
 
