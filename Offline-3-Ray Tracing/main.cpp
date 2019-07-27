@@ -177,7 +177,7 @@ public:
 
     shape() {}
     virtual void draw() {}
-    virtual double intersect(Ray ray, double *current_color, int level, int idx)
+    virtual double intersect(Ray ray, double *current_color, int level)
     {
         return -1;
     }
@@ -244,7 +244,7 @@ public:
         return min(t1, t2);
     }
 
-    double intersect(Ray ray, double *current_color, int level, int idx)
+    double intersect(Ray ray, double *current_color, int level)
     {
         double t = intersecting_point(ray);
 
@@ -323,7 +323,7 @@ public:
 
             for(int k = 0; k < vec.size(); k++)
             {
-                t2 = vec[k]->intersect(reflectionRay, reflected_color, 0, k);
+                t2 = vec[k]->intersect(reflectionRay, reflected_color, 0);
 
                 if(t2 > 0 && t2 < t_min)
                     t_min = t2, nearest = k;
@@ -331,7 +331,7 @@ public:
 
             if(nearest != -1)
             {
-                t2 = vec[nearest]->intersect(reflectionRay, reflected_color, level + 1, nearest);
+                t2 = vec[nearest]->intersect(reflectionRay, reflected_color, level + 1);
 
                 for(int c = 0; c < 3; c++)
                     current_color[c] += (reflected_color[c] * reflection_coeff);
@@ -404,7 +404,7 @@ public:
             return -1;
     }
 
-    double intersect(Ray ray, double *current_color, int level, int idx)
+    double intersect(Ray ray, double *current_color, int level)
     {
         double t = intersecting_point(ray);
 
@@ -435,10 +435,7 @@ public:
             Ray sunLight(start, L);
 
             point N = getNormal();
-            //N.normalize(); already done in the function
-
             point R = getRevReflection(L, N);
-            //R.normalize(); already normalized in the function
 
             point V = subtract(ray.start, intersectionPoint);
             V.normalize();
@@ -483,7 +480,7 @@ public:
 
             for(int k = 0; k < vec.size(); k++)
             {
-                t2 = vec[k]->intersect(reflectionRay, reflected_color, 0, k);
+                t2 = vec[k]->intersect(reflectionRay, reflected_color, 0);
 
                 if(t2 > 0 && t2 < t_min)
                     t_min = t2, nearest = k;
@@ -491,7 +488,7 @@ public:
 
             if(nearest != -1)
             {
-                t2 = vec[nearest]->intersect(reflectionRay, reflected_color, level + 1, nearest);
+                t2 = vec[nearest]->intersect(reflectionRay, reflected_color, level + 1);
 
                 for(int c = 0; c < 3; c++)
                     current_color[c] += (reflected_color[c] * reflection_coeff);
@@ -584,7 +581,7 @@ public:
         return t;
     }
 
-    double intersect(Ray ray, double *current_color, int level, int idx)
+    double intersect(Ray ray, double *current_color, int level)
     {
         double t = intersecting_point(ray);
 
@@ -618,10 +615,7 @@ public:
             Ray sunLight(start, L);
 
             point N = getNormal();
-            //N.normalize();
-
             point R = getRevReflection(L, N);
-            //R.normalize(); already normalized in the function
 
             point V = subtract(ray.start, intersectionPoint);
             V.normalize();
@@ -666,7 +660,7 @@ public:
 
             for(int k = 0; k < vec.size(); k++)
             {
-                t2 = vec[k]->intersect(reflectionRay, reflected_color, 0, k);
+                t2 = vec[k]->intersect(reflectionRay, reflected_color, 0);
 
                 if(t2 > 0 && t2 < t_min)
                     t_min = t2, nearest = k;
@@ -674,7 +668,7 @@ public:
 
             if(nearest != -1)
             {
-                t2 = vec[nearest]->intersect(reflectionRay, reflected_color, level + 1, nearest);
+                t2 = vec[nearest]->intersect(reflectionRay, reflected_color, level + 1);
 
                 for(int c = 0; c < 3; c++)
                     current_color[c] += (reflected_color[c] * reflection_coeff);
@@ -838,7 +832,7 @@ void capture()
             for(int k = 0; k < vec.size(); k++)
             {
                 //by giving level 0 we denote that we  only want to know the nearest object
-                t = vec[k]->intersect(ray, dummy_color, 0, k);
+                t = vec[k]->intersect(ray, dummy_color, 0);
 
                 if(t > 0 && t < t_min)
                     t_min = t, nearest = k;
@@ -846,7 +840,7 @@ void capture()
 
             if(nearest != -1)
             {
-                t = vec[nearest]->intersect(ray, dummy_color, 1, nearest);
+                t = vec[nearest]->intersect(ray, dummy_color, 1);
 
                 for(int c = 0; c < 3; c++)
                 {
