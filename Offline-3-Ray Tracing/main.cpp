@@ -16,7 +16,7 @@
 #define dbg printf("in\n")
 #define nl printf("\n")
 
-#define EPSILON  0.000001
+#define EPSILON  0.0000001
 #define NEAR_PLANE 1
 #define FAR_PLANE 1000
 
@@ -119,7 +119,6 @@ point rotation3D(point v, point reff, int dir)
 point getReflection(point original_vec, point normal)
 {
     double coeff = dot_product(original_vec, normal) * 2;
-    //point reflected_vec = subtract(multiplyWithScaler(normal, coeff), original_vec);
     point reflected_vec = subtract(original_vec, multiplyWithScaler(normal, coeff));
 
     reflected_vec.normalize();
@@ -275,10 +274,7 @@ public:
             Ray sunLight(start, L);
 
             point N = getNormal(intersectionPoint, center);
-            //N.normalize(); already normalized in the function
-
             point R = getRevReflection(L, N);
-            //R.normalize(); already normalized in the function
 
             point V = subtract(ray.start, intersectionPoint);
             V.normalize();
@@ -317,7 +313,8 @@ public:
             point start = add(intersectionPoint, reflection);
             Ray reflectionRay(start, reflection);
 
-            nearest = -1; t_min = 1e4;
+            nearest = -1;
+            t_min = 1e4;
             double *reflected_color = new double[3];
             reflected_color[0] = reflected_color[1] = reflected_color[2] = 0.0;
 
@@ -372,9 +369,12 @@ public:
     //Muller-Trumbore intersection algorithm
     double intersecting_point(Ray ray)
     {
-        //considering C = 0, A = 1, B = 2;
-        point edge1 = subtract(A, C);
-        point edge2 = subtract(B, C);
+        point v0 = A;
+        point v1 = B;
+        point v2 = C;
+
+        point edge1 = subtract(v1, v0);
+        point edge2 = subtract(v2, v0);
 
         point h = cross_product(ray.dir, edge2);
         double a = dot_product(h, edge1);
@@ -384,7 +384,7 @@ public:
             return -1;
 
         double f = 1.0 / a;
-        point s = subtract(ray.start, C);
+        point s = subtract(ray.start, v0);
         double u = f * dot_product(s, h);
 
         if(u < 0.0 || u > 1.0)
@@ -417,8 +417,8 @@ public:
         if(level == 0)
             return t;
 
-        for(int i = 0; i < 3; i++)
-            current_color[i] = color[i] * ambient_coeff;
+        for(int c = 0; c < 3; c++)
+            current_color[c] = color[c] * ambient_coeff;
 
         //intersection point is => (r0 + t * rd)
         point intersectionPoint(add(ray.start, multiplyWithScaler(ray.dir, t)));
@@ -431,7 +431,8 @@ public:
             point L = subtract(light_sources[i], intersectionPoint);
             L.normalize();
 
-            point start = add(intersectionPoint, multiplyWithScaler(L, EPSILON));
+            //point start = add(intersectionPoint, multiplyWithScaler(L, EPSILON * 100));
+            point start = add(intersectionPoint, L);
             Ray sunLight(start, L);
 
             point N = getNormal();
@@ -474,7 +475,9 @@ public:
             point start = add(intersectionPoint, reflection);
             Ray reflectionRay(start, reflection);
 
-            nearest = -1; t_min = 1e4;
+            nearest = -1;
+            t_min = 1e4;
+
             double *reflected_color = new double[3];
             reflected_color[0] = reflected_color[1] = reflected_color[2] = 0.0;
 
@@ -508,7 +511,8 @@ public:
     point origin;
     int tile_quantity;
 
-    Floor(double side, double tileWidth){
+    Floor(double side, double tileWidth)
+    {
         this->ambient_coeff = 0.4;
         this->diffuse_coeff = this->specular_coeff = this->reflection_coeff = 0.2;
         this->specular_exponent = 1.0;
@@ -541,7 +545,8 @@ public:
         glEnd();
     }
 
-    point getNormal(){
+    point getNormal()
+    {
         return point(0, 0, 1);
     }
 
@@ -606,7 +611,7 @@ public:
         point reflection = getReflection(ray.dir, normal);
 
         //Illumination
-       for(int i = 0; i < light_sources.size(); i++)
+        for(int i = 0; i < light_sources.size(); i++)
         {
             point L = subtract(light_sources[i], intersectionPoint);
             L.normalize();
@@ -654,7 +659,8 @@ public:
             point start = add(intersectionPoint, reflection);
             Ray reflectionRay(start, reflection);
 
-            nearest = -1; t_min = 1e4;
+            nearest = -1;
+            t_min = 1e4;
             double *reflected_color = new double[3];
             reflected_color[0] = reflected_color[1] = reflected_color[2] = 0.0;
 
@@ -1142,12 +1148,11 @@ void parseData()
     cin >> light_src_quantity;
 
     point temp;
-
-    cin >> temp.x >> temp.y >> temp.z;
-    light_sources.push_back(temp);
-
-    cin >> temp.x >> temp.y >> temp.z;
-    light_sources.push_back(temp);
+    for(int i = 0; i < light_src_quantity; i++)
+    {
+        cin >> temp.x >> temp.y >> temp.z;
+        light_sources.push_back(temp);
+    }
 }
 
 int main(int argc, char **argv)

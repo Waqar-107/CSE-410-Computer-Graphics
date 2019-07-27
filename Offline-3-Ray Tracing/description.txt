@@ -39,7 +39,6 @@ pyramid
 
 
 
-
 input explanation:
 
 3 level of recursion
