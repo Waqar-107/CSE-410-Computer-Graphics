@@ -809,7 +809,7 @@ void capture()
 {
     bitmap_image image(pixels, pixels);
 
-    double plane_dist = (window_height / 2) * tan(degreeToRadian(fovY / 2));
+    double plane_dist = (window_height / 2) / tan(degreeToRadian(fovY / 2));
     point topLeft, l, r, u;
 
     l = multiplyWithScaler(L, plane_dist);
